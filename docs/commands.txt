@@ -1,0 +1,85 @@
+===== PERSONAL ACCOUNT COMMANDS (firasyacoub@gmail.com) =====
+
+--- Gmail Review ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/openclaw-gws-review'
+
+--- Gmail Actions ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/openclaw-gws-act'
+
+--- Test Single Message ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/openclaw-gws-review-test MESSAGE_ID'
+
+--- Inspect Gmail Review Summary ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc 'cat /data/openclaw-gws/output/gmail-review-summary-latest.txt'
+
+--- List Google Tasks ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/gws-personal tasks tasks list --params "{\"tasklist\":\"NDRqWEpXa21ZWFNScGoxWg\"}"'
+
+--- List Calendar ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/gws-personal calendar calendarList list'
+
+--- Check Credentials ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc 'ls -l /data/openclaw-gws/config/credentials.json'
+
+===== RENTAL ACCOUNT COMMANDS (ariesbreezespi@gmail.com) =====
+
+--- Rental Gmail Profile ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/gws-rental gmail users getProfile --params "{\"userId\":\"me\"}"'
+
+--- Rental Gmail Messages ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/gws-rental gmail users messages list --params "{\"userId\":\"me\",\"maxResults\":10}"'
+
+--- Rental Calendar Events ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/gws-rental calendar calendarList list'
+
+--- Rental Drive Files ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/gws-rental drive files list --params "{\"pageSize\":5}"'
+
+--- Rental Gmail Review (batch) ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/openclaw-gws-review-rental'
+
+--- Rental Gmail Actions ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/openclaw-gws-act-rental'
+
+--- Rental Test Single Message ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/openclaw-gws-review-rental-test MESSAGE_ID'
+
+--- Inspect Rental Review Summary ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc 'cat /data/openclaw-gws/output/gmail-review-rental-summary-latest.txt'
+
+--- Inspect Rental Tasks ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/gws-rental tasks tasks list --params "{\"tasklist\":\"clBVU3IyeDFBTXdUSC1jRQ\"}"'
+
+--- Check Rental Credentials ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc 'ls -l /data/openclaw-gws/config/rental-credentials.json'
+
+--- Create Rental Gmail Label ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/gws-rental gmail users labels create --params "{\"userId\":\"me\"}" --json "{\"name\":\"Rental/LabelName\"}"'
+
+===== MORNING BRIEF =====
+# Context merges: personal GWS calendar + work ICS + personal ICS (workspace paths).
+# Work calendar is ICS-only (not GWS). Rental Gmail via rental-review file; rental
+# Calendar API is not a separate context source unless VPS script adds it — see docs/agent-architecture.txt
+
+--- Build Morning Context ---
+docker exec -it openclaw-ridl-openclaw-1 python3 /data/openclaw-gws/bin/openclaw-morning-context
+
+--- Inspect Morning Brief Context ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc 'cat /data/openclaw-gws/output/morning-brief-context-latest.json'
+
+--- Codex OAuth Recover ---
+docker exec -it openclaw-ridl-openclaw-1 openclaw onboard --auth-choice openai-codex
+
+===== CRON MANAGEMENT =====
+
+--- View GWS Cron Jobs ---
+ssh openclaw-vps "cat /etc/cron.d/openclaw-gws"
+
+--- View GWS Cron Logs ---
+ssh openclaw-vps "tail -50 /var/log/openclaw-gws-review.log"
+ssh openclaw-vps "tail -50 /var/log/openclaw-gws-act.log"
+ssh openclaw-vps "tail -50 /var/log/openclaw-gws-review-rental.log"
+ssh openclaw-vps "tail -50 /var/log/openclaw-gws-act-rental.log"
+
+--- View OpenClaw Cron Jobs ---
+docker exec -it openclaw-ridl-openclaw-1 openclaw cron list

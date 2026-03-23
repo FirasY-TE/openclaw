@@ -1,0 +1,42 @@
+===== LIVE JOBS =====
+
+--- System cron (/etc/cron.d/openclaw-gws on VPS host) ---
+
+Gmail Review (Personal)
+*/10 * * * *
+Script: /data/openclaw-gws/bin/openclaw-gws-review
+Log: /var/log/openclaw-gws-review.log
+
+Gmail Actions (Personal)
+*/15 * * * *
+Script: /data/openclaw-gws/bin/openclaw-gws-act
+Log: /var/log/openclaw-gws-act.log
+
+Gmail Review (Rental)
+*/10 * * * *
+Script: /data/openclaw-gws/bin/openclaw-gws-review-rental
+Log: /var/log/openclaw-gws-review-rental.log
+
+Gmail Actions (Rental)
+*/15 * * * *
+Script: /data/openclaw-gws/bin/openclaw-gws-act-rental
+Log: /var/log/openclaw-gws-act-rental.log
+
+--- OpenClaw cron (openclaw cron list) ---
+
+Morning Brief
+Monday - Friday 07:00 AM
+Builds context from Gmail review (personal + rental summaries) + calendar + tasks
+Calendar merge: personal GWS + work ICS + personal ICS (work is ICS-only; not via GWS)
+Output: /data/openclaw-gws/output/morning-brief-context-latest.json
+
+Evening Reset
+Sunday - Thursday 9:15 PM
+
+===== PLANNED JOBS =====
+
+Hourly Financial Scan
+
+Nightly System Health Check
+
+Daily Planning Run

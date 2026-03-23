@@ -1,0 +1,524 @@
+⭐ OPENCLAW PERSONAL AI SYSTEM — PROJECT STATE (Mar 2026)
+🧠 System Purpose
+
+Personal autonomous AI assistant that:
+
+Reviews Gmail (personal + rental accounts)
+
+Classifies messages
+
+Creates Google Tasks
+
+Sends alerts
+
+Generates daily morning brief
+
+Runs on schedule via cron
+
+Will later support multi-subagent orchestration
+
+🖥️ Core Runtime Architecture
+
+VPS
+
+Docker container: openclaw-ridl-openclaw-1
+
+Primary execution environment for automation agents
+
+Persistent storage mounted at:
+
+/data
+
+Documentation root: /root/openclawDocs
+
+🔑 Google Workspace Integration
+
+Using:
+
+Google Workspace CLI (gws)
+
+--- Personal Account (firasyacoub@gmail.com) ---
+
+Wrapper script:
+
+/data/openclaw-gws/bin/gws-personal
+
+Credentials stored:
+
+/data/openclaw-gws/config/credentials.json
+
+OAuth client project: 662312499101-...
+
+Config dir: default (/data/.config/gws)
+
+Verified working APIs:
+
+✅ Gmail
+✅ Google Tasks
+✅ Google Calendar
+
+--- Rental Account (ariesbreezespi@gmail.com) ---
+
+Wrapper script:
+
+/data/openclaw-gws/bin/gws-rental
+
+Credentials stored:
+
+/data/openclaw-gws/config/rental-credentials.json
+
+OAuth client project: 932094296711-...
+
+Config dir: /data/.config/gws-rental (isolated to prevent token cache bleed)
+
+Auth method: direct account auth (exported authorized_user credentials),
+not delegated Gmail API access
+
+Verified working APIs:
+
+✅ Gmail
+✅ Google Calendar
+✅ Google Drive
+
+Environment variables set in both wrappers:
+
+HOME=/data
+
+XDG_CONFIG_HOME=/data/.config
+
+GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE → respective credentials file
+
+GOOGLE_WORKSPACE_CLI_CONFIG_DIR → separate per account (rental uses /data/.config/gws-rental)
+
+Key lesson: each wrapper must set its own GOOGLE_WORKSPACE_CLI_CONFIG_DIR to
+prevent the shared token_cache.json from returning the wrong account identity.
+
+📬 Gmail Processing Pipeline
+
+--- Personal Gmail Review ---
+
+Step 1 — Review Agent
+
+Script:
+
+/data/openclaw-gws/bin/openclaw-gws-review
+
+Function:
+
+Pull recent Gmail metadata
+
+Classify message priority
+
+Detect family VIP senders
+
+Detect urgent / transactional / promotional emails
+
+Decide:
+
+Priority level
+
+Task creation requirement
+
+Alert requirement
+
+Draft reply requirement
+
+Output files:
+
+/data/openclaw-gws/output/gmail-review-latest.json
+/data/openclaw-gws/output/gmail-review-summary-latest.txt
+
+--- Rental Gmail Review ---
+
+Batch review script:
+
+/data/openclaw-gws/bin/openclaw-gws-review-rental
+
+Single-message test script:
+
+/data/openclaw-gws/bin/openclaw-gws-review-rental-test
+
+Default classification context: mailbox=rentals, account_context=rental
+
+MailboxType: primary (default) or property-related (signal-matched)
+
+Rental Pipeline Status: ACTIVE
+
+Classification categories (Category field):
+  maintenance: yale, hvac, lock, repair, plumbing, batteries, thermostat, wifi, smart lock, water heater, a/c, appliance
+  guest: guest, reservation, check-in, check-out, door code, your stay, review, arrival, departure, cleaning, hospitable, booking
+  financial: refund, damage, paypal, stripe, airbnb payout, vrbo payout, tax, insurance premium, invoice, payment, statement
+
+Sender signals by category:
+  maintenance: yalehomeus.com
+  financial: ashley@ciainsuretexas.com, twia.org, weareflood.com
+  guest: hospitable.com
+
+Property signals: 118 e. hibiscus, 123 e aries, south padre island, 78597,
+  aries breeze, beach walk, yale lock, batteries, smart lock
+
+Priority escalation:
+  urgent maintenance (batteries, repair, leak, flood, broken) → task + alert
+  urgent guest (complaint, reservation today, emergency) → task + alert
+  guest (reservation, check-in/out, arrival, cleaning) → medium priority + task
+  financial (statements, payouts, insurance) → low priority + task
+  routine maintenance → info only
+
+Rental task list: clBVU3IyeDFBTXdUSC1jRQ
+
+Gmail labels (rental account):
+  Rental/Maintenance, Rental/Guest, Rental/Financial, Rental/Urgent, Rental/Task Created
+
+Output files:
+
+/data/openclaw-gws/output/gmail-review-rental-latest.json
+/data/openclaw-gws/output/gmail-review-rental-summary-latest.txt
+/data/openclaw-gws/output/gmail-review-rental-test-latest.txt
+
+Status: operational (Mar 16 2026)
+
+Step 2 — Action Agent (Personal)
+
+Script:
+
+/data/openclaw-gws/bin/openclaw-gws-act
+
+Function:
+
+Applies Gmail labels
+
+Creates Google Tasks
+
+Sends alerts (future wiring)
+
+Executes persistent automation decisions
+
+Step 3 — Action Agent (Rental) ✅ OPERATIONAL (Mar 16 2026)
+
+Script: /data/openclaw-gws/bin/openclaw-gws-act-rental
+
+Function:
+  Reads rental review summary
+  Applies Gmail labels by category (Rental/Maintenance, Rental/Guest, Rental/Financial)
+  Applies Rental/Urgent label for urgent items
+  Creates Google Tasks in rental task list (clBVU3IyeDFBTXdUSC1jRQ)
+  Prints alert stubs for urgent items (Telegram wiring next)
+
+Step 4 — Single Message Test Tool (Personal)
+
+Script:
+
+/data/openclaw-gws/bin/openclaw-gws-review-test
+
+Used for:
+
+Debugging classification logic
+
+Testing new rules
+
+Validating VIP sender detection
+
+Transaction notification tuning
+
+👨‍👩‍👧 Family VIP Sender System
+
+Configuration file:
+
+/data/openclaw-gws/config/family-vip-senders.txt
+
+Supports:
+
+Exact email matches
+
+Domain matches (ex: @austinisd.org)
+
+VIP emails automatically:
+
+Classified as family
+
+Routed to Family Task List
+
+Personal Task List ID: NDRqWEpXa21ZWFNScGoxWg
+Rental Task List ID: clBVU3IyeDFBTXdUSC1jRQ
+
+💰 Transaction Notification Detection
+
+Current supported signals:
+
+Venmo
+
+Apple receipts
+
+Shipping notifications
+
+Payment confirmations
+
+Future expansion planned:
+
+Chase
+
+Wells Fargo
+
+Credit card alerts
+
+Airbnb payout alerts
+
+This logic lives inside:
+
+openclaw-gws-review-test (Python block)
+
+📅 Morning Brief System
+
+Status: operational with dual-account data (Mar 16 2026)
+
+Flow:
+
+Gmail Review Agents run (personal + rental)
+Calendar events fetched (personal GWS + ICS sources — see below)
+Tasks fetched
+System composes morning context with derived intelligence
+Rental Gmail summary merged into context (rental_maintenance, rental_guest, rental_financial, rental_urgent buckets)
+Derived alerts include both personal + rental items
+Focus candidates include rental urgent and guest items
+
+Output:
+
+/data/openclaw-gws/output/morning-brief-context-latest.json
+
+Gmail data sources:
+  /data/openclaw-gws/output/gmail-review-summary-latest.txt (personal)
+  /data/openclaw-gws/output/gmail-review-rental-summary-latest.txt (rental)
+
+Calendar data sources (inputs.calendar in context JSON):
+  - personal-gws: gws-personal — personal Google Calendar.
+  - work: ICS file on workspace — work calendar is not exposed via GWS; an ICS is supplied (e.g. /data/.openclaw/workspace/calendar/work.ics).
+  - personal-ics: optional fallback ICS (e.g. /data/.openclaw/workspace/calendar/personal.ics).
+
+Rental calendar note:
+  gws-rental can list/query the rental account Calendar API for ops and scripts, but morning-brief-context-latest.json does not add a separate “rental-gws” calendar merge unless openclaw-morning-context is extended on the VPS. Rental operational signal in the brief is primarily from rental Gmail. Feeds subscribed on the personal calendar (e.g. property ICS) appear under personal-gws events.
+
+Delivery: terminal (future: notification, voice assistant)
+
+🤖 Future Subagent Architecture (Planned — Next Phase)
+Subagent types:
+
+Gmail Intelligence Agent
+
+Calendar Planner Agent
+
+Task Execution Agent
+
+Notification Agent
+
+Daily Brief Agent
+
+System Health Monitor Agent
+
+These will run as:
+
+autonomous scheduled jobs
+
+or coordinated agent chain
+
+Wrappers control auth — subagents are workflow tools, not auth boundaries.
+
+⚙️ Current Known Issues
+
+Need cleaner transaction domain config system
+
+Need subagent orchestration layer wiring
+
+Need alert delivery channel (Slack / Push / Voice / Telegram)
+
+🚀 Next Implementation Phases
+Phase 1 — Gmail system stabilization ✅
+
+Classification working
+
+Label automation working
+
+VIP sender detection working
+
+Phase 2 — Transaction tuning + Rental deployment ✅
+
+Transaction classification working
+
+Rental account deployed and review pipeline operational
+
+Morning brief context builder operational
+
+Phase 3 — Rental integration + Action wiring ✅ (Mar 16 2026)
+
+Rental classification expanded (maintenance/guest/financial categories)
+Rental action agent built and operational
+Rental summary merged into morning brief context
+Cron jobs wired for both personal + rental pipelines
+Awaiting first weekday production brief validation
+
+Phase 4 — Subagent Orchestration
+
+Introduce autonomous execution model
+
+Multi-agent workflow coordination
+
+Phase 5 — Full Personal AI Assistant
+
+Proactive planning
+
+Financial awareness
+
+Family logistics optimization
+
+Real-time decision support
+
+🔵 PLAN DELTA — Updated Architecture + Execution Strategy (March 2026)
+Purpose
+
+Document how the original OpenClaw + Google Workspace rollout plan was modified during real implementation.
+
+The original design was architecturally correct.
+However, execution sequencing and operational hardening were adjusted to reduce risk and stabilize the system.
+
+✅ Major Changes from Original Plan
+1. Execution Order Changed — Stabilize One Account First
+
+Original plan:
+
+Build full dual-account architecture immediately
+
+Actual implementation:
+
+Stabilized single-account runtime first, then added rental
+
+2. Runtime Storage Path Changed — Persistence Requirement
+
+New standard runtime root:
+
+/data/openclaw-gws
+
+Structure:
+
+/data/openclaw-gws/bin
+/data/openclaw-gws/config
+/data/openclaw-gws/output
+
+3. Headless Auth Flow Clarified
+
+Proven flow:
+
+Authenticate on Mac → Export authorized credentials → Copy to VPS → Wrapper points to file
+
+4. Wrapper Strategy Simplified — Smaller Components First
+
+Build small persistent scripts, refactor into larger wrappers later if needed.
+
+5. Morning Brief / Agent Wiring Split from GWS Infrastructure
+
+Infrastructure stabilization must precede orchestration logic.
+
+✅ Architectural Principles That Remain Correct
+
+Subagents should not be used as authentication isolation boundaries
+
+Separate wrapper scripts must be used for separate Google accounts
+
+Personal Google Tasks should remain the master task system
+
+Rental calendar should remain read-only
+
+Draft-first email workflows are safer than auto-send
+
+Heartbeat / cron automation should be added only after manual validation
+
+Rental path uses direct account auth, not delegated Gmail API access
+
+📊 Progress vs Original Rollout Plan
+Core GWS Infrastructure
+
+~95% complete (dual account)
+
+persistent runtime working
+
+review pipelines working (personal + rental)
+
+classification tuning working
+
+task routing working
+
+Classification Logic
+
+~95% complete
+
+VIP logic working
+
+transaction logic working
+
+rental property signals working
+
+rental category classification working (maintenance/guest/financial)
+
+priority escalation rules working
+
+Multi-Account Architecture
+
+~100% complete
+
+design finalized
+
+rental account wrapper deployed and verified (Mar 16 2026)
+
+rental review pipeline operational (Mar 16 2026)
+
+rental action script operational (Mar 16 2026)
+
+Automation Layer (briefing / subagents / cron)
+
+~85% complete
+
+morning brief context builder operational (dual-account)
+
+cron jobs running for Gmail review + actions (personal + rental)
+
+rental summary merged into morning brief
+
+subagent orchestration planned next phase
+
+🎯 Current Execution Focus
+
+Immediate priorities:
+
+validate first weekday production brief with dual-account data
+
+wire Telegram alert delivery for urgent rental items
+
+wire subagent review architecture (Phase 4)
+
+🧠 Strategic Lesson Learned
+
+The original architecture was sound.
+The successful modification was sequencing and operational hardening, not redesign.
+
+PHASE 2 STATUS — March 16
+
+Morning Brief Context Builder v1.1 operational.
+
+Working data pipelines:
+- Gmail summary file ingest → categorized buckets (personal + rental)
+- Google Tasks ingest → overdue/today/soon filtering
+- Personal Google Calendar ingest (today window)
+- Rental Google Calendar accessible via gws-rental
+- ICS fallback ingest (work + personal)
+- Source health reporting
+
+Architecture stabilized:
+- Context written to /data/openclaw-gws/output/morning-brief-context-latest.json
+- Cron job uses file as single source of truth
+- Agent runs in container foreground (no systemd)
+- OAuth reauthorization flow confirmed working
+- Dual-account auth isolation via GOOGLE_WORKSPACE_CLI_CONFIG_DIR
+
+Dev workflow improvement:
+- VPS connected to Cursor GUI
+- Documentation root at /root/openclawDocs
+
+⭐ End of Project State

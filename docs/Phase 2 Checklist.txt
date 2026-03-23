@@ -1,0 +1,157 @@
+🚀 Phase-2 Execution Checklist (Stabilize → Automate → Expand)
+🎯 Phase-2 Goal
+
+Move from:
+
+"Working GWS runtime + manual review scripts"
+
+To:
+
+"Fully automated personal agent system with morning briefing + dual-account review pipelines"
+
+✅ STEP 1 — Final Classification Hardening ✅ COMPLETE
+
+1.1 Transaction Notification Class
+
+Transaction domains configured in review script
+venmo, paypal, chase, wellsfargo, apple, fedex, ups, usps, amazon
+Logic: info priority, no task, no alert
+
+1.2 Shipping Notification Class
+
+Subject-based detection: out for delivery, delivered, tracking, shipment
+Logic: info priority, no task, no alert
+
+1.3 VIP Family Class
+
+Working via /data/openclaw-gws/config/family-vip-senders.txt
+Supports exact email + domain matches
+Routes to Family Task List
+
+✅ STEP 2 — Label Routing Automation ✅ COMPLETE
+
+Script: /data/openclaw-gws/bin/openclaw-gws-act
+Applies labels, creates tasks, executes automation decisions
+
+✅ STEP 3 — Persistent Cron Jobs ✅ COMPLETE
+
+Gmail review and actions running on cron schedule
+Cron file: /etc/cron.d/openclaw-gws (VPS host)
+Personal review */10, actions */15
+Rental review */10, actions */15
+
+✅ STEP 4 — Morning Briefing ✅ COMPLETE (Mar 16 2026)
+
+Morning brief context builder operational
+Output: /data/openclaw-gws/output/morning-brief-context-latest.json
+Includes: Gmail priorities, calendar events, tasks, derived intelligence
+Rental Gmail summary merged into morning brief context (rental_* buckets)
+Personal + rental alerts in derived.topAlerts
+Personal + rental focus items in derived.focusCandidates
+
+Calendar merge (documented Mar 2026):
+  - Events: personal Google Calendar (gws-personal) + work ICS + optional personal ICS on workspace.
+  - Work calendar: not available via GWS — supplied as ICS (e.g. work.ics under agent workspace).
+  - Rental Google Calendar API: not a separate merged source in context JSON unless VPS script is extended; rental brief signal is primarily Gmail. Imported booking feeds on the personal calendar may still appear as personal-gws events.
+
+✅ STEP 5 — Deploy Rental Google Account ✅ COMPLETE (Mar 16 2026)
+
+gws-rental wrapper deployed and verified
+Rental credentials: /data/openclaw-gws/config/rental-credentials.json
+Direct account auth (exported authorized_user), not delegated Gmail API access
+Isolated config dir: /data/.config/gws-rental (prevents token cache bleed)
+
+Verified:
+  Gmail profile returns ariesbreezespi@gmail.com
+  Calendar returns rental property calendars
+  Drive returns rental files
+
+Rental review pipeline:
+  /data/openclaw-gws/bin/openclaw-gws-review-rental — batch review
+  /data/openclaw-gws/bin/openclaw-gws-review-rental-test — single message test
+  Default context: mailbox=rentals, account_context=rental
+  Rental-specific signals: property addresses, insurance, Yale locks, etc.
+  MailboxType: primary (default) or property-related (signal-matched)
+
+✅ STEP 6 — Rental Hardening ✅ COMPLETE (Mar 16 2026)
+
+6.1 Rental classification tuning ✅
+  Category field added: maintenance, guest, financial, uncategorized
+  Maintenance signals: yale, hvac, lock, repair, plumbing, batteries, thermostat, wifi, smart lock
+  Guest signals: guest, reservation, check-in, check-out, door code, arrival, departure, cleaning, hospitable
+  Financial signals: refund, damage, paypal, stripe, airbnb payout, vrbo payout, tax, insurance premium, invoice
+
+6.2 Rental task creation logic ✅
+  Urgent maintenance (batteries, repair, leak, flood, broken) → high priority + task + alert
+  Urgent guest (complaint, reservation today, emergency) → high priority + task + alert
+  Guest (reservation, check-in/out, arrival, cleaning) → medium priority + task
+  Financial (statements, payouts, insurance) → low priority + task
+  Routine maintenance → info only
+
+6.3 Build openclaw-gws-act-rental ✅
+  Script: /data/openclaw-gws/bin/openclaw-gws-act-rental
+  Points to gws-rental wrapper
+  Gmail labels: Rental/Maintenance, Rental/Guest, Rental/Financial, Rental/Urgent, Rental/Task Created
+  Task routing to RENTAL_TASKLIST_ID (clBVU3IyeDFBTXdUSC1jRQ)
+  Category-prefixed task titles (Maintenance:, Guest:, Financial:)
+  Alert stubs for urgent items
+
+6.4 Merge rental summary into morning brief context ✅
+  Morning brief consumes both:
+    /data/openclaw-gws/output/gmail-review-summary-latest.txt (personal)
+    /data/openclaw-gws/output/gmail-review-rental-summary-latest.txt (rental)
+  Rental buckets: rental_maintenance, rental_guest, rental_financial, rental_urgent
+  Alerts and focus candidates include rental items
+
+6.5 Validate first weekday production brief after rental merge
+  Awaiting next weekday morning cron run
+
+⬜ STEP 7 — Subagent Architecture (Next Phase)
+
+Moved to next phase — not required before closing Phase 2.
+
+Design:
+  Main Agent reads summaries, owns personal tasks, owns alerts
+  Inbox Review Subagent runs personal classification
+  Rental Review Subagent runs rental classification
+  Wrappers control auth — subagents are workflow tools, not auth boundaries
+
+⬜ STEP 8 — Optional Upgrades (NOT Required Now)
+
+Gmail Pub/Sub push notifications
+Drive document ingestion agent
+Auto-draft reply suggestions
+Gemini CLI secondary console
+Model Armor sanitization layer
+Telegram alert delivery for urgent items
+
+📊 Phase-2 Completion Definition
+
+System is considered Phase-2 Complete when:
+
+✅ inbox auto-classified
+✅ labels auto-applied
+✅ tasks auto-created
+✅ cron running
+✅ morning briefing works
+⬜ Telegram alerts work (alert stubs in place, delivery wiring next)
+✅ second account connected
+✅ rental review pipeline operational
+✅ rental action script operational
+✅ rental summary merged into morning brief
+✅ rental classification categories (maintenance/guest/financial)
+✅ rental task creation logic (priority escalation)
+✅ rental cron jobs wired
+
+[x] Gmail summary ingestion
+[x] Shipping detection improvements
+[x] Financial detection baseline
+[x] Calendar normalization logic
+[x] Task bucketing logic
+[x] Context health reporting
+[x] OAuth recovery playbook documented
+[x] Cursor GUI development workflow enabled
+[x] Rental category classification
+[x] Rental act agent operational
+[x] Rental morning brief merge
+[x] System cron for all 4 GWS jobs

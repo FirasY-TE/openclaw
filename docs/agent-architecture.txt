@@ -1,0 +1,89 @@
+===== OPENCLAW AGENT ARCHITECTURE =====
+
+Agent Chain:
+
+1. Personal Gmail Review Agent
+   - wrapper: gws-personal
+   - pulls personal email metadata
+   - classifies priority (urgent, family, info, transaction)
+   - detects VIP senders, shipping, transactions
+   - output: gmail-review-summary-latest.txt
+
+2. Rental Gmail Review Agent
+   - wrapper: gws-rental
+   - pulls rental email metadata
+   - default context: mailbox=rentals, account_context=rental
+   - detects property-related signals (insurance, locks, addresses)
+   - classifies by category: maintenance, guest, financial, uncategorized
+   - priority escalation: urgent maintenance/guest → high + alert, guest → medium + task, financial → low + task
+   - mailbox_type: primary (default) or property-related (signal-matched)
+   - output: gmail-review-rental-summary-latest.txt
+
+3. Gmail Action Agent (Personal)
+   - applies labels (OpenClaw/Urgent, OpenClaw/Family Priority, OpenClaw/Reply Needed, OpenClaw/Info, OpenClaw/Task Created)
+   - creates tasks (personal task list: NDRqWEpXa21ZWFNScGoxWg)
+   - sends alerts
+
+4. Gmail Action Agent (Rental) ✅ OPERATIONAL
+   - script: /data/openclaw-gws/bin/openclaw-gws-act-rental
+   - applies labels by category (Rental/Maintenance, Rental/Guest, Rental/Financial)
+   - applies Rental/Urgent for urgent items
+   - marks processed messages with Rental/Task Created
+   - creates tasks (rental task list: clBVU3IyeDFBTXdUSC1jRQ)
+   - task titles prefixed by category (Maintenance:, Guest:, Financial:)
+   - prints alert stubs for urgent items
+
+5. Daily Brief Agent
+   - aggregates from both pipelines:
+       Personal review summary → urgent, family, financial, shipping buckets
+       Rental review summary → rental_maintenance, rental_guest, rental_financial, rental_urgent buckets
+       Calendar events (see “Calendar sources” below)
+       Tasks (Google Tasks)
+   - generates morning briefing context
+   - derived.topAlerts includes both personal + rental alerts
+   - derived.focusCandidates includes rental urgent + guest items
+   - output: morning-brief-context-latest.json
+
+   Calendar sources (openclaw-morning-context)
+   - personal-gws: Google Calendar for the personal account via gws-personal (primary + subscribed calendars on that account).
+   - work: ICS file — work calendar is not available through GWS; an ICS is placed on the agent workspace (e.g. /data/.openclaw/workspace/calendar/work.ics) and merged as the “work” source.
+   - personal-ics: optional fallback ICS on the workspace (e.g. personal.ics).
+   - Rental Gmail is merged via rental-review summary text (buckets above); that is separate from Calendar API.
+   - Rental account Google Calendar (gws-rental) is available for scripts and probes but is not merged as its own calendar source in morning-brief-context-latest.json unless explicitly added to openclaw-morning-context on the VPS. Booking feeds that appear on the personal calendar (e.g. imported Hospitable/Airbnb ICS) show up under personal-gws events, not as a separate “rental-gws” row.
+
+6. Scheduler Agent (cron)
+   - runs agents on schedule via /etc/cron.d/openclaw-gws
+   - live: personal review (*/10) + actions (*/15)
+   - live: rental review (*/10) + actions (*/15)
+   - morning brief: Mon-Fri 07:00 (openclaw cron)
+   - evening reset: Sun-Thu 21:15 (openclaw cron)
+
+7. Subagent Layer [PLANNED - Next Phase]
+   - Main Agent reads summaries, owns tasks, owns alerts
+   - Inbox Review Subagent runs personal classification
+   - Rental Review Subagent runs rental classification
+   - Wrappers control auth, not subagents
+
+8. Future Agents
+   - Financial Intelligence Agent
+   - Family Logistics Agent
+   - Travel Planning Agent
+   - STR Business Agent
+   - System Health Agent
+
+Morning Brief Data Flow (current)
+
+Personal Gmail Review Summary (text)
+Rental Gmail Review Summary (text) ✅ MERGED
+        ↓
+openclaw-morning-context script
+        ↓
+Context JSON (single source of truth)
+  - personal buckets: urgent, family, financial, shipping
+  - rental buckets: rental_maintenance, rental_guest, rental_financial, rental_urgent
+  - calendar: merged events from personal-gws + work ICS + personal-ics (not rental Calendar API unless wired)
+  - derived: topAlerts (personal + rental), focusCandidates (personal + rental)
+        ↓
+Cron job agent execution
+        ↓
+Telegram Morning Brief
