@@ -39,3 +39,29 @@ resolve_telegram_route_target() {
 
   printf "%s\n" "${target}"
 }
+
+send_telegram_target_message() {
+  local target="$1"
+  local message="$2"
+  openclaw message send --channel telegram --target "${target}" --message "${message}"
+}
+
+send_with_topic_fallback() {
+  local logical_route="$1"
+  local message="$2"
+
+  local primary_target
+  primary_target="$(resolve_telegram_route_target "${logical_route}")"
+
+  if send_telegram_target_message "${primary_target}" "${message}"; then
+    return 0
+  fi
+
+  if send_telegram_target_message "${primary_target}" "${message}"; then
+    return 0
+  fi
+
+  local fallback_target="telegram:1460581318"
+  local fallback_message="[FALLBACK from ${logical_route}] ${message}"
+  send_telegram_target_message "${fallback_target}" "${fallback_message}"
+}
