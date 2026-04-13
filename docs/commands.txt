@@ -1,5 +1,27 @@
 ===== PERSONAL ACCOUNT COMMANDS (firasyacoub@gmail.com) =====
 
+===== MEMORY ANCHORS (ALWAYS CHECK THESE FIRST) =====
+# Do NOT use `gog auth list` as source of truth for this stack.
+# Runtime auth is wrapper-based and isolated per account:
+#   - /data/openclaw-gws/bin/gws-personal
+#   - /data/openclaw-gws/bin/gws-rental
+# Ground truth is whether wrapper API calls succeed as user `node`.
+
+--- Ground Truth Auth Check (personal + rental, as node) ---
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/gws-personal gmail users getProfile --params '{\"userId\":\"me\"}'"
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/gws-personal tasks tasklists list"
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/gws-personal calendar calendarList list"
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/gws-rental gmail users getProfile --params '{\"userId\":\"me\"}'"
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/gws-rental calendar calendarList list"
+
+--- Ground Truth Hospitable Check ---
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/openclaw-hospitable-fetch"
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 jq '{fetchedAt, propCnt: (.properties.data|length), resCnt: (.reservations.data|length), msgCnt: (.messages.data|length)}' /data/openclaw-gws/output/hospitable-events-latest.json"
+
+--- Ground Truth News Check ---
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 test -x /data/openclaw-gws/bin/openclaw-news-fetch && echo news_fetch_script_present || echo news_fetch_script_missing"
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 test -f /data/openclaw-gws/output/news-latest.json && echo news_output_present || echo news_output_missing"
+
 --- Gmail Review ---
 docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/openclaw-gws-review'
 
@@ -56,10 +78,141 @@ docker exec -it openclaw-ridl-openclaw-1 bash -lc 'ls -l /data/openclaw-gws/conf
 --- Create Rental Gmail Label ---
 docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/gws-rental gmail users labels create --params "{\"userId\":\"me\"}" --json "{\"name\":\"Rental/LabelName\"}"'
 
+===== CREDENTIAL DEPLOYMENT =====
+# After scp + docker cp of credential files, fix ownership so the gateway (node user) can read them.
+# Gateway runs as `node`, docker exec/cp defaults to root — this mismatch causes silent auth failures.
+
+--- Deploy credentials from Mac ---
+scp ~/secrets/gws-reauth/credentials.json openclaw-vps:/tmp/cred-personal.json
+scp ~/secrets/gws-reauth/rental-credentials.json openclaw-vps:/tmp/cred-rental.json
+ssh openclaw-vps "docker cp /tmp/cred-personal.json openclaw-ridl-openclaw-1:/data/openclaw-gws/config/credentials.json"
+ssh openclaw-vps "docker cp /tmp/cred-rental.json openclaw-ridl-openclaw-1:/data/openclaw-gws/config/rental-credentials.json"
+
+--- Fix ownership (REQUIRED after every deploy) ---
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 chown node:node /data/openclaw-gws/config/credentials.json /data/openclaw-gws/config/rental-credentials.json"
+
+--- Verify ---
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 ls -la /data/openclaw-gws/config/credentials.json /data/openclaw-gws/config/rental-credentials.json"
+# Both files should show: node node (not root root)
+
+--- Smoke test as node user (simulates gateway environment) ---
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/gws-personal calendar events list --params '{\"calendarId\":\"primary\",\"timeMin\":\"2026-01-01T00:00:00Z\",\"timeMax\":\"2026-01-02T00:00:00Z\",\"singleEvents\":true}'" | head -3
+
+===== TOKEN / AUTH TROUBLESHOOTING =====
+
+--- Symptoms of expired/revoked tokens ---
+# Any of these mean a token refresh is needed:
+#   - 401 invalid_grant: Token has been expired or revoked
+#   - 401 invalid_client: The provided client secret is invalid
+#   - Gmail labels stop being applied (act pipeline runs but no effect)
+#   - Morning brief shows command_error for calendar/tasks/gmail sources
+#   - Auth health check reports status: "degraded" or "error"
+#   - Telegram alert: "Auth health degraded: gws-personal..."
+#   - Review/act cron logs repeat the same old message IDs (no new mail processed)
+
+--- Quick diagnosis (run from Mac) ---
+# 1. Check auth health output first:
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 jq . /data/openclaw-gws/output/auth-health-latest.json"
+
+# 2. If auth-health-latest.json is missing/stale, run the check manually:
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/openclaw-gws-auth-health-check"
+
+# 3. Test each wrapper directly as node (ground truth):
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/gws-personal gmail users getProfile --params '{\"userId\":\"me\"}'"
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/gws-rental gmail users getProfile --params '{\"userId\":\"me\"}'"
+
+# 4. Check credential file ownership (must be node:node, not root:root):
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 ls -la /data/openclaw-gws/config/credentials.json /data/openclaw-gws/config/rental-credentials.json"
+
+# 5. Check morning brief health sources for command_error:
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 python3 -c \"import json; d=json.load(open('/data/openclaw-gws/output/morning-brief-context-latest.json')); [print('  %s: %s' % (s['name'], s.get('status'))) for s in d['health']['sources']]\""
+
+--- Common causes ---
+# - Google account security event (password change, 2FA change, suspicious login)
+# - OAuth token revoked in Google Account permissions (myaccount.google.com > Security > Third-party apps)
+# - New gws auth login overwrote a previous session (gws uses single config dir)
+# - Credential file deployed as root:root (docker cp default) without chown fix
+# - Stale token_cache.json in container returning wrong account
+
+===== TOKEN REFRESH RUNBOOK (PROVEN FLOW) =====
+# Tested and confirmed working Mar 30 2026.
+# Key concept: gws uses a single config dir per terminal session.
+# Personal uses default (~/.config/gws/). Rental uses override (~/.config/gws-rental/).
+# Each account has its own GCP OAuth client (different client_secret.json files).
+
+--- Step 0: Prep directories on Mac ---
+mkdir -p ~/.config/gws ~/.config/gws-rental ~/secrets/gws-reauth
+chmod 700 ~/.config/gws ~/.config/gws-rental ~/secrets/gws-reauth
+
+--- Step 1: Install client secret files into config dirs ---
+cp "/Users/bellabot/Documents/Personal GWS/client_secret_662312499101-re9ji0vs4i40gtvg0p00626u92oirert.apps.googleusercontent.com.json" ~/.config/gws/client_secret.json
+chmod 600 ~/.config/gws/client_secret.json
+
+cp "/Users/bellabot/Documents/Rental GWS/client_secret_932094296711-irk2qhvlfvchied6k2ch17e9ti0v6ajm.apps.googleusercontent.com.json" ~/.config/gws-rental/client_secret.json
+chmod 600 ~/.config/gws-rental/client_secret.json
+
+--- Step 2: Re-auth personal (default config dir) ---
+# This prints a Google auth URL. Open in browser, pick firasyacoub@gmail.com, approve all scopes.
+gws auth login --full
+
+--- Step 3: Export personal credentials ---
+gws auth export --unmasked > ~/secrets/gws-reauth/credentials.json
+chmod 600 ~/secrets/gws-reauth/credentials.json
+
+--- Step 4: Re-auth rental (isolated config dir) ---
+# CRITICAL: set this env var first so gws targets rental config, not personal.
+export GOOGLE_WORKSPACE_CLI_CONFIG_DIR="$HOME/.config/gws-rental"
+gws auth logout
+gws auth login --full
+# Pick ariesbreezespi@gmail.com in the browser.
+
+--- Step 5: Export rental credentials ---
+gws auth export --unmasked > ~/secrets/gws-reauth/rental-credentials.json
+chmod 600 ~/secrets/gws-reauth/rental-credentials.json
+unset GOOGLE_WORKSPACE_CLI_CONFIG_DIR
+
+--- Step 6: Verify exports before deploying ---
+jq '{type, client_id, refresh_token_len: (.refresh_token|length)}' ~/secrets/gws-reauth/credentials.json
+# Expected: client_id=662312499101-..., refresh_token_len=100+
+jq '{type, client_id, refresh_token_len: (.refresh_token|length)}' ~/secrets/gws-reauth/rental-credentials.json
+# Expected: client_id=932094296711-..., refresh_token_len=100+
+
+--- Step 7: Deploy to VPS + fix ownership + clear stale caches ---
+scp ~/secrets/gws-reauth/credentials.json openclaw-vps:/tmp/cred-personal.json
+scp ~/secrets/gws-reauth/rental-credentials.json openclaw-vps:/tmp/cred-rental.json
+ssh openclaw-vps "docker cp /tmp/cred-personal.json openclaw-ridl-openclaw-1:/data/openclaw-gws/config/credentials.json"
+ssh openclaw-vps "docker cp /tmp/cred-rental.json openclaw-ridl-openclaw-1:/data/openclaw-gws/config/rental-credentials.json"
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 chown node:node /data/openclaw-gws/config/credentials.json /data/openclaw-gws/config/rental-credentials.json"
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 rm -f /data/.config/gws/token_cache.json /data/.config/gws-rental/token_cache.json"
+
+--- Step 8: Validate as node (REQUIRED) ---
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/gws-personal gmail users getProfile --params '{\"userId\":\"me\"}'"
+# Expected: emailAddress=firasyacoub@gmail.com
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/gws-rental gmail users getProfile --params '{\"userId\":\"me\"}'"
+# Expected: emailAddress=ariesbreezespi@gmail.com
+
+--- Step 9: Run auth health check to confirm ---
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/openclaw-gws-auth-health-check"
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 jq . /data/openclaw-gws/output/auth-health-latest.json"
+# Expected: status=ok for both checks
+
+--- Step 10: Force-run pipelines to catch up ---
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/openclaw-gws-review"
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/openclaw-gws-act"
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/openclaw-gws-review-rental"
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/openclaw-gws-act-rental"
+
+--- Step 11: Clean up exports from Mac (after confirming all green) ---
+rm -rf ~/secrets/gws-reauth
+
 ===== MORNING BRIEF =====
-# Context merges: personal GWS calendar + work ICS + personal ICS (workspace paths).
-# Work calendar is ICS-only (not GWS). Rental Gmail via rental-review file; rental
-# Calendar API is not a separate context source unless VPS script adds it — see docs/agent-architecture.txt
+# Context merges:
+# - personal GWS calendar + work ICS + personal ICS (workspace paths)
+# - rental-events-context-latest.json (from Phase 3 signal merge)
+# - task-lifecycle.json (for escalated lifecycle tasks)
+# Work calendar is ICS-only (not GWS). Rental Gmail signal via rental-review file (separate from calendar).
+# All four calendar sources (personal-gws, rental-gws, work ICS, personal-ics) are wired.
+# Full reference: docs/morning-brief.txt
 
 --- Build Morning Context ---
 docker exec -it openclaw-ridl-openclaw-1 python3 /data/openclaw-gws/bin/openclaw-morning-context
@@ -67,8 +220,73 @@ docker exec -it openclaw-ridl-openclaw-1 python3 /data/openclaw-gws/bin/openclaw
 --- Inspect Morning Brief Context ---
 docker exec -it openclaw-ridl-openclaw-1 bash -lc 'cat /data/openclaw-gws/output/morning-brief-context-latest.json'
 
+===== PHASE 3 (RENTAL INTELLIGENCE) =====
+
+--- Run Hospitable Fetch ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/openclaw-hospitable-fetch'
+
+--- Inspect Hospitable Events Latest ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc 'jq '\''{fetchedAt, propCnt: (.properties.data|length), resCnt: (.reservations.data|length), msgCnt: (.messages.data|length)}'\'' /data/openclaw-gws/output/hospitable-events-latest.json'
+
+--- Run Rental Signal Merge ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/openclaw-rental-signal-merge'
+
+--- Inspect Rental Events Context Latest ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc 'jq '\''{version, generatedAt, date, arrCnt: (.arrivalsToday|length), depCnt: (.departuresToday|length), gmailCnt: (.gmailSignals|length), riskCnt: (.compoundRisks|length), alertCnt: (.topAlerts|length)}'\'' /data/openclaw-gws/output/rental-events-context-latest.json'
+
+--- Run Task Lifecycle Sync ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/openclaw-task-lifecycle-sync'
+
+--- Inspect Task Lifecycle Latest ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc 'jq '\''{total: (.tasks|length), open: ([.tasks[]|select(.status=="open")]|length), escalated: ([.tasks[]|select(.status=="escalated")]|length), lastUpdated: .lastUpdatedAt}'\'' /data/openclaw-gws/state/task-lifecycle.json'
+
+--- Tail Phase 3 Logs ---
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 tail -100 /data/openclaw-gws/logs/hospitable-fetch.log"
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 tail -100 /data/openclaw-gws/logs/rental-signal-merge.log"
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 tail -100 /data/openclaw-gws/logs/task-lifecycle-sync.log"
+
+===== AUTH HEALTH CHECK =====
+# Automated check runs every 30 min via system cron as user `node`.
+# On failure: writes degraded status + sends Telegram alert (rate-limited to 1/hour).
+# On recovery: clears cooldown so next failure alerts immediately.
+# Morning brief reads auth-health-latest.json and surfaces degraded auth in topAlerts + health.
+
+--- Run Auth Health Check Now (as node) ---
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/openclaw-gws-auth-health-check"
+
+--- Inspect Auth Health Output ---
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 jq . /data/openclaw-gws/output/auth-health-latest.json"
+# status=ok means both personal+rental wrappers authenticated successfully.
+# status=degraded means at least one wrapper failed. Check .checks[] for details.
+
+--- Tail Auth Health Log ---
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 tail -100 /data/openclaw-gws/output/auth-health-check.log"
+
+--- Reset Telegram Alert Cooldown (force re-alert on next check) ---
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 rm -f /data/openclaw-gws/output/.auth-alert-last-sent"
+
+--- Auth Health in Morning Brief ---
+# Morning brief context includes auth-health as a health source.
+# If degraded, brief shows: "Auth degraded: gws-personal: ..." in topAlerts.
+# Verify with:
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 python3 -c \"import json; d=json.load(open('/data/openclaw-gws/output/morning-brief-context-latest.json')); [print('  %s: %s' % (s['name'], s.get('status'))) for s in d['health']['sources'] if 'auth' in s['name']]\""
+
 --- Codex OAuth Recover ---
 docker exec -it openclaw-ridl-openclaw-1 openclaw onboard --auth-choice openai-codex
+
+===== GOOGLE TASKS (ONE-TIME DEDUPE) =====
+# Removes duplicate tasks on the PERSONAL task list by Gmail Message ID in notes
+# (keeps newest `updated` per ID). Dry-run first. Optional: --also-title-dups for same-title cleanup.
+# Rental list: enable Tasks API in rental GCP project first, then edit TASKLIST in the script.
+
+--- Dedupe dry-run (no deletes) ---
+docker exec -it openclaw-ridl-openclaw-1 python3 /data/openclaw-gws/bin/dedupe-google-tasks-once.py --dry-run
+
+--- Dedupe for real ---
+docker exec -it openclaw-ridl-openclaw-1 python3 /data/openclaw-gws/bin/dedupe-google-tasks-once.py
+
+--- From Mac via SSH (non-interactive) ---
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 python3 /data/openclaw-gws/bin/dedupe-google-tasks-once.py --dry-run"
 
 ===== CRON MANAGEMENT =====
 
@@ -83,3 +301,25 @@ ssh openclaw-vps "tail -50 /var/log/openclaw-gws-act-rental.log"
 
 --- View OpenClaw Cron Jobs ---
 docker exec -it openclaw-ridl-openclaw-1 openclaw cron list
+
+===== PHASE 1 UAT — FORUM TOPIC ROUTING =====
+
+--- Verify Morning Brief routes to Triage Digest topic (triage_digest) ---
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 openclaw cron run ce3cf461-3e58-49f0-8e64-e0b2b7b873bb --timeout 180000"
+
+--- Verify Evening Reset routes to Triage Digest topic (triage_digest) ---
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 openclaw cron run 742493a0-6a2b-42e4-b518-2a87961db8a4 --timeout 180000"
+
+--- Verify Auth Health alert routes to System/Auth topic (system_auth) ---
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/openclaw-gws-auth-health-check"
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 jq . /data/openclaw-gws/output/auth-health-latest.json"
+
+--- Fallback test (intentional invalid topic ID, then restore) ---
+# 1) Run auth health check with temporary invalid route override (single process only)
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 env ROUTE_SYSTEM_AUTH_TARGET='-1000000000000:topic:999999999' /data/openclaw-gws/bin/openclaw-gws-auth-health-check || true"
+
+# 2) Confirm fallback marker appears
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 rg '\\[FALLBACK from system_auth\\]' /data/openclaw-gws/output/auth-health-check.log"
+
+# 3) Restore step: rerun normally (no env override) to confirm System/Auth topic route is active again
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/openclaw-gws-auth-health-check"

@@ -31,6 +31,7 @@ Fallback policy (all topic-routed operational sends):
 - Primary: forum topic route from canonical logical route map
 - Retry: one retry to the same topic route
 - Final fallback: DM target `telegram:1460581318` with route marker
+- Full executable UAT command pack: see `docs/commands.txt` section `PHASE 1 UAT — FORUM TOPIC ROUTING`.
 
 --- System cron (/etc/cron.d/openclaw-gws on VPS host) ---
 
