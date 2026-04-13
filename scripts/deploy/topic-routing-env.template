@@ -1,0 +1,14 @@
+# Telegram Forum Topic Routing Contract (template only)
+#
+# Provide these keys in runtime environment/config on VPS.
+# Do not commit real production chat or topic IDs.
+#
+# Format:
+#   ROUTE_<LOGICAL_ROUTE>_TARGET="<chatId>:topic:<topicId>"
+#
+# Required logical routes for Phase 1:
+ROUTE_TRIAGE_DIGEST_TARGET="-1001234567890:topic:101"
+ROUTE_SYSTEM_AUTH_TARGET="-1001234567890:topic:102"
+ROUTE_URGENT_TARGET="-1001234567890:topic:103"
+ROUTE_BEEPER_TARGET="-1001234567890:topic:104"
+ROUTE_HOSPITABLE_TARGET="-1001234567890:topic:105"
