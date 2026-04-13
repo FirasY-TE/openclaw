@@ -1,5 +1,37 @@
 ===== LIVE JOBS =====
 
+===== PHASE 1 FORUM TOPIC ROUTING CHECKLIST (OPERATOR) =====
+
+Goal: move operational delivery from DM-only targets to forum-topic routes with deterministic fallback.
+
+1) Create Telegram Forum supergroup and enable Topics.
+2) Create topics: Urgent, Triage Digest, Beeper, Hospitable, System/Auth.
+3) Add the bot to the forum and confirm it can post in all topics.
+4) Capture topic IDs for each topic and record them in your VPS ops notes.
+5) Set route target env vars on VPS using topic-capable format `<chatId>:topic:<topicId>`:
+   - `ROUTE_TRIAGE_DIGEST_TARGET` (morning brief + evening reset primary route)
+   - `ROUTE_SYSTEM_AUTH_TARGET` (auth health degraded alerts primary route)
+   - `ROUTE_URGENT_TARGET`
+   - `ROUTE_BEEPER_TARGET`
+   - `ROUTE_HOSPITABLE_TARGET`
+6) Verify route values and container health:
+   - `ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 env | rg 'ROUTE_(TRIAGE_DIGEST|SYSTEM_AUTH|URGENT|BEEPER|HOSPITABLE)_TARGET'"`
+   - `ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 openclaw channels status --probe"`
+7) Validate `triage_digest` delivery path (morning brief + evening reset):
+   - `ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 openclaw cron run ce3cf461-3e58-49f0-8e64-e0b2b7b873bb --timeout 180000"`
+   - `ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 openclaw cron run 742493a0-6a2b-42e4-b518-2a87961db8a4 --timeout 180000"`
+8) Validate `system_auth` delivery path:
+   - `ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/openclaw-gws-auth-health-check"`
+9) Validate fallback policy (retry once, then DM fallback):
+   - Temporarily set an invalid topic ID in `ROUTE_SYSTEM_AUTH_TARGET`.
+   - Re-run auth health check and confirm DM includes marker: `[FALLBACK from system_auth]`.
+   - Restore the correct topic ID immediately after test.
+
+Fallback policy (all topic-routed operational sends):
+- Primary: forum topic route from canonical logical route map
+- Retry: one retry to the same topic route
+- Final fallback: DM target `telegram:1460581318` with route marker
+
 --- System cron (/etc/cron.d/openclaw-gws on VPS host) ---
 
 Gmail Review (Personal)
@@ -22,16 +54,115 @@ Gmail Actions (Rental)
 Script: /data/openclaw-gws/bin/openclaw-gws-act-rental
 Log: /var/log/openclaw-gws-act-rental.log
 
+Phase 3: Rental Intelligence
+
+Hospitable Fetch
+*/10 * * * *
+Script: /data/openclaw-gws/bin/openclaw-hospitable-fetch
+Log: /data/openclaw-gws/logs/hospitable-fetch.log
+
+Rental Signal Merge
+3,13,23,33,43,53 * * * *
+Script: /data/openclaw-gws/bin/openclaw-rental-signal-merge
+Log: /data/openclaw-gws/logs/rental-signal-merge.log
+
+Task Lifecycle Sync
+*/30 * * * *
+Script: /data/openclaw-gws/bin/openclaw-task-lifecycle-sync
+Log: /data/openclaw-gws/logs/task-lifecycle-sync.log
+
+Auth Health Check
+*/30 * * * *
+Script: /data/openclaw-gws/bin/openclaw-gws-auth-health-check
+Log: /data/openclaw-gws/output/auth-health-check.log
+Output: /data/openclaw-gws/output/auth-health-latest.json
+Alerting: Telegram (1460581318) on degraded, rate-limited to 1/hour
+Cooldown file: /data/openclaw-gws/output/.auth-alert-last-sent
+Notes:
+  - Runs as user `node` to match gateway runtime context.
+  - Checks gws-personal + gws-rental auth via Gmail getProfile.
+  - Marks status=degraded on authError/invalid_grant to catch token failures early.
+  - On degraded: sends alert through `system_auth` topic route first.
+  - If topic delivery fails: retries once, then DM fallback with `[FALLBACK from system_auth]`.
+  - On recovery: clears cooldown so next failure re-alerts immediately.
+  - Morning brief reads auth-health-latest.json as a health source.
+  - If degraded, auth failure surfaces in topAlerts and health section.
+  - Reauth runbook: docs/commands.txt (TOKEN REFRESH RUNBOOK section).
+
+Appointment-to-Calendar (prompt + confirm)
+5,15,25,35,45,55 * * * *
+Script: /data/openclaw-gws/bin/openclaw-gws-appointment-prompt (Python)
+Helper: /data/openclaw-gws/bin/openclaw-gws-appointment-confirm (Python)
+Log: /data/openclaw-gws/logs/appointment-prompt.log
+State: /data/openclaw-gws/state/pending-appointments.json
+Flow:
+  1. Reads gmail-review-summary-latest.txt for CalendarPrompt=yes entries.
+  2. Fetches full email body, extracts date/time/title/location.
+  3. Writes pending appointment (with full event JSON) to state file.
+  4. Sends Telegram prompt: "Appointment detected: ... Would you like me to add?"
+  5. Injects a one-shot main-session system event (openclaw cron add --at 1m
+     --session main --system-event "..." --delete-after-run) so the gateway
+     agent has context when the user replies.
+  6. User replies "yes" in Telegram → main session agent sees system event
+     context → agent calls: exec python3 .../openclaw-gws-appointment-confirm latest
+  7. Confirm helper reads state, creates calendar event via gws-personal,
+     marks appointment as confirmed.
+Agent TOOLS.md (/home/node/.openclaw/workspace/TOOLS.md) documents the
+confirm helper commands for the gateway agent.
+Idempotent via state file (skips already-processed message IDs).
+
 --- OpenClaw cron (openclaw cron list) ---
 
 Morning Brief
 Monday - Friday 07:00 AM
-Builds context from Gmail review (personal + rental summaries) + calendar + tasks
-Calendar merge: personal GWS + work ICS + personal ICS (work is ICS-only; not via GWS)
-Output: /data/openclaw-gws/output/morning-brief-context-latest.json
+Execution: the OpenClaw cron agent runs gws-personal/gws-rental sanity checks,
+then calls openclaw-morning-context which builds context from:
+- Gmail review summaries (personal + rental)
+- Calendar: personal-gws + work-gws + rental-gws + work ICS + personal-ics
+- Google Tasks (personal list, overdue/today/soon)
+- rental-events-context-latest.json (from Phase 3 signal merge)
+- task-lifecycle.json (for escalated lifecycle tasks)
+- hospitable freshness check
+- auth-health-latest.json (auth status for personal + rental)
+- news-latest.json (news categories)
+Then writes: /data/openclaw-gws/output/morning-brief-context-latest.json
+Agent reads the JSON and composes the brief, delivers via Telegram.
+Note: the cron agent runs as user `node` — credential files must be node-owned.
+Full reference: docs/morning-brief.txt
 
 Evening Reset
 Sunday - Thursday 9:15 PM
+ID: 742493a0-6a2b-42e4-b518-2a87961db8a4
+Schedule: 0 15 21 * * 0-4 (Sun-Thu 21:15)
+Timezone: America/Chicago
+Session: isolated (fresh agent session per run)
+Delivery: announce → telegram → route `triage_digest` (Triage Digest topic primary; DM fallback only on topic failure)
+
+Purpose:
+  Next-day prep — schedule preview, priority proposal, and ICS export reminder.
+  Runs the night before each weekday so the morning brief has fresh data.
+
+Agent prompt (verbatim):
+  1) First: remind Firas to export/send the latest work calendar ICS (so
+     tomorrow's brief is accurate).
+  2) Use /data/.openclaw/workspace/calendar/work.ics as the current source
+     of truth (America/Chicago).
+  3) Summarize tomorrow's schedule (key meetings + focus blocks), flag prep
+     items, propose top 3 priorities, and suggest a realistic morning plan.
+  4) Assume weekday routine blocks: 7:00–7:30 boys ready/school; 7:30–8:15
+     workout.
+
+Key details:
+  - Reads the work ICS directly (no context builder pipeline).
+  - Does NOT run openclaw-morning-context or read morning-brief-context-latest.json.
+  - The ICS reminder is critical because the work calendar is not available
+    via Google Workspace API — it must be manually exported/uploaded.
+  - Routine blocks are the same as the morning brief (07:00–08:15).
+
+Manual re-run:
+  ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 openclaw cron run 742493a0-6a2b-42e4-b518-2a87961db8a4"
+Run history:
+  openclaw cron runs --id 742493a0-6a2b-42e4-b518-2a87961db8a4 --limit 20
 
 ===== PLANNED JOBS =====
 

@@ -29,7 +29,8 @@ Persistent storage mounted at:
 
 /data
 
-Documentation root: /root/openclawDocs
+Documentation root: /data/.openclaw/workspace/docs/ (agent-readable, node-owned)
+Legacy location: /root/openclawDocs (root-only, stale — do not use)
 
 🔑 Google Workspace Integration
 
@@ -92,6 +93,29 @@ GOOGLE_WORKSPACE_CLI_CONFIG_DIR → separate per account (rental uses /data/.con
 
 Key lesson: each wrapper must set its own GOOGLE_WORKSPACE_CLI_CONFIG_DIR to
 prevent the shared token_cache.json from returning the wrong account identity.
+
+Memory rule for future agent sessions:
+Do not treat `gog auth list` output as the authority for this deployment.
+Authority is successful wrapper calls as user `node`:
+  /data/openclaw-gws/bin/gws-personal ...
+  /data/openclaw-gws/bin/gws-rental ...
+If those pass, Google auth is connected for runtime.
+
+⚠️ Credential File Ownership (critical):
+The OpenClaw gateway process runs as user `node` (via `runuser -u node` in the
+container entrypoint). Any subprocess the gateway spawns (cron job pipeline,
+openclaw-morning-context, gws-personal, gws-rental) inherits the `node` UID.
+
+When deploying credentials via `docker cp` or `scp` + `docker cp`, files arrive
+as root:root with 600 permissions. The `node` user cannot read them.
+
+After every credential deployment, run:
+  chown node:node /data/openclaw-gws/config/credentials.json
+  chown node:node /data/openclaw-gws/config/rental-credentials.json
+
+Manual `docker exec` commands mask this because docker exec defaults to root.
+The symptom is: manual gws calls succeed, but cron/morning-brief pipeline fails
+with "command_error" / exit status 1 for GWS calls.
 
 📬 Gmail Processing Pipeline
 
@@ -290,14 +314,18 @@ Gmail data sources:
   /data/openclaw-gws/output/gmail-review-rental-summary-latest.txt (rental)
 
 Calendar data sources (inputs.calendar in context JSON):
-  - personal-gws: gws-personal — personal Google Calendar.
-  - work: ICS file on workspace — work calendar is not exposed via GWS; an ICS is supplied (e.g. /data/.openclaw/workspace/calendar/work.ics).
+  - personal-gws: gws-personal -- personal Google Calendar (today+tomorrow).
+  - rental-gws: gws-rental -- rental Google Calendar (today+tomorrow). Events tagged source=rental-gws.
+  - work: ICS file on workspace -- work calendar is not exposed via GWS; an ICS is supplied (e.g. /data/.openclaw/workspace/calendar/work.ics).
   - personal-ics: optional fallback ICS (e.g. /data/.openclaw/workspace/calendar/personal.ics).
 
-Rental calendar note:
-  gws-rental can list/query the rental account Calendar API for ops and scripts, but morning-brief-context-latest.json does not add a separate “rental-gws” calendar merge unless openclaw-morning-context is extended on the VPS. Rental operational signal in the brief is primarily from rental Gmail. Feeds subscribed on the personal calendar (e.g. property ICS) appear under personal-gws events.
+Note: rental Gmail signal (maintenance, guest, financial buckets) is separate from the rental
+calendar -- it comes from Gmail review summaries. Booking feeds subscribed on the personal
+calendar (e.g. Hospitable ICS) appear under personal-gws events.
 
-Delivery: terminal (future: notification, voice assistant)
+Full morning brief reference: docs/morning-brief.txt
+
+Delivery: Telegram route `triage_digest` (Triage Digest topic primary; DM fallback only on topic failure)
 
 🤖 Future Subagent Architecture (Planned — Next Phase)
 Subagent types:
@@ -329,6 +357,28 @@ Need cleaner transaction domain config system
 Need subagent orchestration layer wiring
 
 Need alert delivery channel (Slack / Push / Voice / Telegram)
+
+Rental Gmail actions (openclaw-gws-act-rental): duplicate tasks are mitigated by
+(1) per-message Gmail ID in rental-act-processed.txt and (2) a flock lock on
+rental-act-processed.lock so overlapping cron runs cannot both pass the
+grep-dedup check before either appends to the processed file. Deployed script
+copy: scripts/deploy/openclaw-gws-act-rental (sync to VPS /data/openclaw-gws/bin/).
+
+Rental Gmail review (openclaw-gws-review-rental-test): bare "payment" was removed
+from financial subject signals (it matched every payment confirmation). Payment
+confirmation phrases (e.g. thank you for your payment, payment received) force
+CreateTask: no and a final catch-all suppresses tasks for those subjects.
+Deployed copy: scripts/deploy/openclaw-gws-review-rental-test.
+
+Personal Gmail review (openclaw-gws-review-test): updated Mar 23 2026 with:
+(1) Rental vendor routing — senders in /data/openclaw-gws/config/rental-vendor-senders.txt
+    whose subjects contain invoice/statement/payment due signals are classified as
+    Mailbox=rentals, Priority=medium, CreateTask=yes, TaskList=rental list.
+    Currently includes: @islabellaspi.com (Zaida Cavazos / Isla Bella SPI).
+(2) Appointment confirmation detection — subjects matching "your appointment",
+    "appointment confirmation", "booking confirmed", etc. get CreateTask=yes on the
+    personal task list. Does not auto-create calendar events (manual add still needed).
+Deployed copy: scripts/deploy/openclaw-gws-review-test.
 
 🚀 Next Implementation Phases
 Phase 1 — Gmail system stabilization ✅
@@ -498,15 +548,15 @@ wire subagent review architecture (Phase 4)
 The original architecture was sound.
 The successful modification was sequencing and operational hardening, not redesign.
 
-PHASE 2 STATUS — March 16
+PHASE 2 STATUS — March 23 (updated)
 
 Morning Brief Context Builder v1.1 operational.
 
 Working data pipelines:
 - Gmail summary file ingest → categorized buckets (personal + rental)
 - Google Tasks ingest → overdue/today/soon filtering
-- Personal Google Calendar ingest (today window)
-- Rental Google Calendar accessible via gws-rental
+- Personal Google Calendar ingest (today window) via gws-personal
+- Rental Google Calendar accessible via gws-rental (API works, not merged into morning context by default — see Calendar sources note above)
 - ICS fallback ingest (work + personal)
 - Source health reporting
 
@@ -516,9 +566,49 @@ Architecture stabilized:
 - Agent runs in container foreground (no systemd)
 - OAuth reauthorization flow confirmed working
 - Dual-account auth isolation via GOOGLE_WORKSPACE_CLI_CONFIG_DIR
+- Credential files must be owned by node:node (see Credential File Ownership note above)
 
 Dev workflow improvement:
 - VPS connected to Cursor GUI
-- Documentation root at /root/openclawDocs
+- Documentation root at /data/.openclaw/workspace/docs/ (agent-readable, node-owned)
+
+OAuth Project Status (Mar 23 2026):
+- Both GCP OAuth projects moved to "In production" (no more 7-day token expiry)
+- Personal: 662312499101-... → published
+- Rental: 932094296711-... → published
+
+Auth reliability note (Mar 30 2026):
+- "Token refresh required" can still happen from explicit revocation, rotated credentials,
+  or file ownership/config drift.
+- Recovery path:
+  1) re-auth + export authorized_user credentials
+  2) redeploy to /data/openclaw-gws/config/*.json
+  3) chown node:node on deployed files
+  4) validate wrappers as user `node`
+
+News pipeline note (Mar 30 2026):
+- Morning Brief expects a news input block.
+- If news is missing, verify:
+  - /data/openclaw-gws/bin/openclaw-news-fetch exists
+  - /data/openclaw-gws/output/news-latest.json exists and is fresh
+- If either is missing, this is runtime deployment drift on VPS and should be restored.
+
+Auth health monitor (Mar 30 2026):
+- Script: /data/openclaw-gws/bin/openclaw-gws-auth-health-check
+- Output: /data/openclaw-gws/output/auth-health-latest.json
+- Log: /data/openclaw-gws/output/auth-health-check.log
+- Schedule: every 30 minutes (system cron), run as user `node`
+- Purpose: detect personal/rental invalid_grant early, before label/task/brief failures
+- Telegram alert: logical route `system_auth` (System/Auth topic primary; retry once then DM fallback with marker)
+- Cooldown file: /data/openclaw-gws/output/.auth-alert-last-sent
+- On recovery: clears cooldown so next failure re-alerts immediately
+- Morning brief integration: auth-health read as health source; degraded surfaces in topAlerts
+- Reauth runbook: docs/commands.txt (TOKEN REFRESH RUNBOOK section)
+- Proven reauth flow (Mar 30 2026):
+  1) Install client secret into isolated config dir per account
+  2) gws auth login --full (browser OAuth)
+  3) gws auth export --unmasked > credential file
+  4) scp + docker cp to VPS, chown node:node, clear stale token caches
+  5) Validate wrappers as node, run auth health check, force-run pipelines
 
 ⭐ End of Project State

@@ -81,6 +81,21 @@ Once these work from your Mac, the Cursor agent can run the same commands for yo
 2. **Key-based auth**  
    Ensure you can run `ssh openclaw-vps "echo ok"` without a password (Steps 3–4).
 
+## Credential deployment (GWS OAuth)
+
+After re-authenticating GWS on your Mac and exporting credentials, deploy them to the container and **fix ownership**:
+
+```bash
+# Copy to VPS host, then into container
+scp ~/secrets/gws-reauth/credentials.json openclaw-vps:/tmp/cred-personal.json
+ssh openclaw-vps "docker cp /tmp/cred-personal.json openclaw-ridl-openclaw-1:/data/openclaw-gws/config/credentials.json"
+
+# CRITICAL: fix ownership — gateway runs as user `node`, not root
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 chown node:node /data/openclaw-gws/config/credentials.json"
+```
+
+Repeat for rental credentials (`rental-credentials.json`). Without `chown node:node`, the cron pipeline silently fails because `docker exec` defaults to root (masking the issue) but the gateway's subprocesses run as `node`.
+
 ## How the agent uses it
 
 The agent runs commands **from your Mac** via SSH. OpenClaw lives in the container `openclaw-ridl-openclaw-1`, so use `docker exec` (no `-it` for non-interactive):
@@ -93,3 +108,13 @@ To get a shell inside the container (interactive, from Mac):
 `ssh -t openclaw-vps "docker exec -it openclaw-ridl-openclaw-1 bash"`
 
 The Cursor rule **VPS SSH (openclaw-vps)** uses host alias `openclaw-vps` and container `openclaw-ridl-openclaw-1`. If your alias or container name differs, edit `.cursor/rules/vps-ssh-openclaw.mdc`.
+
+## Forum Topic Routing Migration Reference
+
+The canonical operator checklist lives in `docs/cron-jobs.txt` under:
+`PHASE 1 FORUM TOPIC ROUTING CHECKLIST (OPERATOR)`.
+
+Use that section for:
+- Forum/topic setup (`Triage Digest`, `System/Auth`, plus remaining topics)
+- Route map env wiring (`triage_digest`, `system_auth`, etc.)
+- Validation commands and fallback test procedure

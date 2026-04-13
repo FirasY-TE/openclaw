@@ -1,89 +1,188 @@
 ===== OPENCLAW AGENT ARCHITECTURE =====
 
-Agent Chain:
+Runtime Scope:
+- VPS operational layer: /data/openclaw-gws/bin, /config, /output, /state, /logs
+- Repo intelligence layer: src/phase3/* (schemas, lifecycle, signals, orchestration, subagents)
+- Canonical task system: Google Tasks
+- Delivery: Morning Brief via OpenClaw cron (07:00 weekdays), routed to `triage_digest` topic first with DM fallback on topic failure; no live ad hoc API calls at send time
+
+Container User Model:
+- Gateway process runs as user `node` (entrypoint uses `runuser -u node`)
+- All gateway-spawned subprocesses (cron pipeline, morning-context, gws wrappers) inherit UID `node`
+- `docker exec` defaults to root — masks permission issues during manual testing
+- Credential files in /data/openclaw-gws/config/ MUST be owned by node:node
+- After any credential deployment: chown node:node /data/openclaw-gws/config/*.json
+
+
+===== CURRENT AGENT CHAIN (LIVE) =====
 
 1. Personal Gmail Review Agent
    - wrapper: gws-personal
    - pulls personal email metadata
    - classifies priority (urgent, family, info, transaction)
    - detects VIP senders, shipping, transactions
-   - output: gmail-review-summary-latest.txt
+   - output: /data/openclaw-gws/output/gmail-review-summary-latest.txt
 
 2. Rental Gmail Review Agent
    - wrapper: gws-rental
    - pulls rental email metadata
    - default context: mailbox=rentals, account_context=rental
-   - detects property-related signals (insurance, locks, addresses)
    - classifies by category: maintenance, guest, financial, uncategorized
-   - priority escalation: urgent maintenance/guest → high + alert, guest → medium + task, financial → low + task
-   - mailbox_type: primary (default) or property-related (signal-matched)
-   - output: gmail-review-rental-summary-latest.txt
+   - priority escalation: urgent maintenance/guest -> high + alert, guest -> medium + task, financial -> low + task
+   - output: /data/openclaw-gws/output/gmail-review-rental-summary-latest.txt
 
 3. Gmail Action Agent (Personal)
-   - applies labels (OpenClaw/Urgent, OpenClaw/Family Priority, OpenClaw/Reply Needed, OpenClaw/Info, OpenClaw/Task Created)
-   - creates tasks (personal task list: NDRqWEpXa21ZWFNScGoxWg)
-   - sends alerts
+   - applies personal labels
+   - creates tasks on personal task list: NDRqWEpXa21ZWFNScGoxWg
+   - emits alert stubs
 
 4. Gmail Action Agent (Rental) ✅ OPERATIONAL
    - script: /data/openclaw-gws/bin/openclaw-gws-act-rental
    - applies labels by category (Rental/Maintenance, Rental/Guest, Rental/Financial)
    - applies Rental/Urgent for urgent items
    - marks processed messages with Rental/Task Created
-   - creates tasks (rental task list: clBVU3IyeDFBTXdUSC1jRQ)
-   - task titles prefixed by category (Maintenance:, Guest:, Financial:)
+   - creates tasks on rental list: clBVU3IyeDFBTXdUSC1jRQ
    - prints alert stubs for urgent items
 
-5. Daily Brief Agent
-   - aggregates from both pipelines:
-       Personal review summary → urgent, family, financial, shipping buckets
-       Rental review summary → rental_maintenance, rental_guest, rental_financial, rental_urgent buckets
-       Calendar events (see “Calendar sources” below)
-       Tasks (Google Tasks)
-   - generates morning briefing context
-   - derived.topAlerts includes both personal + rental alerts
-   - derived.focusCandidates includes rental urgent + guest items
-   - output: morning-brief-context-latest.json
+5. Hospitable Fetch Agent ✅ OPERATIONAL (Phase 3)
+   - script: /data/openclaw-gws/bin/openclaw-hospitable-fetch
+   - auth: PAT from /data/openclaw-gws/config/hospitable.json
+   - fetches: properties, reservations, per-reservation messages
+   - writes: /data/openclaw-gws/output/hospitable-events-latest.json
+   - logs: /data/openclaw-gws/logs/hospitable-fetch.log
+   - current API behavior handled:
+     - /v2/reservations requires properties[] and date window
+     - messages come from /v2/reservations/{id}/messages (no top-level /v2/messages)
 
-   Calendar sources (openclaw-morning-context)
-   - personal-gws: Google Calendar for the personal account via gws-personal (primary + subscribed calendars on that account).
-   - work: ICS file — work calendar is not available through GWS; an ICS is placed on the agent workspace (e.g. /data/.openclaw/workspace/calendar/work.ics) and merged as the “work” source.
-   - personal-ics: optional fallback ICS on the workspace (e.g. personal.ics).
-   - Rental Gmail is merged via rental-review summary text (buckets above); that is separate from Calendar API.
-   - Rental account Google Calendar (gws-rental) is available for scripts and probes but is not merged as its own calendar source in morning-brief-context-latest.json unless explicitly added to openclaw-morning-context on the VPS. Booking feeds that appear on the personal calendar (e.g. imported Hospitable/Airbnb ICS) show up under personal-gws events, not as a separate “rental-gws” row.
+6. Rental Signal Merge Agent ✅ OPERATIONAL (Phase 3)
+   - script: /data/openclaw-gws/bin/openclaw-rental-signal-merge
+   - inputs:
+       /data/openclaw-gws/output/gmail-review-rental-summary-latest.txt
+       /data/openclaw-gws/output/hospitable-events-latest.json
+   - output:
+       /data/openclaw-gws/output/rental-events-context-latest.json
+   - surfaces:
+       topAlerts, compound risks, rental focus candidates
 
-6. Scheduler Agent (cron)
-   - runs agents on schedule via /etc/cron.d/openclaw-gws
-   - live: personal review (*/10) + actions (*/15)
-   - live: rental review (*/10) + actions (*/15)
-   - morning brief: Mon-Fri 07:00 (openclaw cron)
-   - evening reset: Sun-Thu 21:15 (openclaw cron)
+7. Task Lifecycle Sync Agent ✅ OPERATIONAL (Phase 3)
+   - script: /data/openclaw-gws/bin/openclaw-task-lifecycle-sync
+   - inputs:
+       /data/openclaw-gws/output/rental-events-context-latest.json
+       /data/openclaw-gws/state/task-lifecycle.json (prior state)
+   - outputs:
+       /data/openclaw-gws/state/task-lifecycle.json
+       /data/openclaw-gws/state/rental-fingerprints.json
+   - lifecycle behavior:
+       fingerprint dedupe, open/seen/escalated/resolved tracking, age-based escalation
 
-7. Subagent Layer [PLANNED - Next Phase]
-   - Main Agent reads summaries, owns tasks, owns alerts
-   - Inbox Review Subagent runs personal classification
-   - Rental Review Subagent runs rental classification
-   - Wrappers control auth, not subagents
+8. Auth Health Check Agent ✅ OPERATIONAL (Mar 30 2026)
+   - script: /data/openclaw-gws/bin/openclaw-gws-auth-health-check
+   - runs as user `node` (cron */30)
+   - checks: gws-personal + gws-rental via Gmail getProfile
+   - output: /data/openclaw-gws/output/auth-health-latest.json
+   - log: /data/openclaw-gws/output/auth-health-check.log
+   - on degraded:
+       writes status=degraded with failed check details
+      sends via logical route `system_auth` (System/Auth topic primary, DM fallback if topic delivery fails; rate-limited 1/hour max)
+       cooldown file: /data/openclaw-gws/output/.auth-alert-last-sent
+   - on recovery:
+       writes status=ok, clears alert cooldown
+   - consumed by: morning brief (health source + topAlerts if degraded)
+   - reauth runbook: docs/commands.txt (TOKEN REFRESH RUNBOOK section)
 
-8. Future Agents
-   - Financial Intelligence Agent
-   - Family Logistics Agent
-   - Travel Planning Agent
-   - STR Business Agent
-   - System Health Agent
+9. Daily Brief Agent ✅ UPGRADED (Phase 3)
+   - script: /data/openclaw-gws/bin/openclaw-morning-context
+   - consumes prepared files only:
+       personal/rental summaries, calendar, tasks, rental-events-context,
+       task-lifecycle, auth-health-latest, news-latest
+   - writes:
+       /data/openclaw-gws/output/morning-brief-context-latest.json
+   - includes:
+       rentalOperations, rentalRiskRadar, rentalFocusCandidates, health sources (14 total)
 
-Morning Brief Data Flow (current)
 
-Personal Gmail Review Summary (text)
-Rental Gmail Review Summary (text) ✅ MERGED
+===== CALENDAR SOURCES (openclaw-morning-context) =====
+
+All wired sources (in the Python script):
+- personal-gws: Google Calendar for personal account via gws-personal (primary + subscribed calendars)
+- rental-gws: Google Calendar for rental account via gws-rental (primary calendar, today+tomorrow window)
+- work: ICS file in workspace (work calendar not available via GWS)
+- personal-ics: optional fallback ICS
+
+Rental calendar events are tagged source=rental-gws and health reports as rental-gws-calendar.
+Rental Gmail signal is separate — it comes from gmail-review-rental-summary (text buckets),
+not the Calendar API. Booking feeds subscribed on the personal calendar (e.g. Hospitable ICS)
+appear under personal-gws events.
+
+Full reference: docs/morning-brief.txt
+
+
+===== PHASE 3 HEALTH + FRESHNESS MODEL =====
+
+- Morning Brief reads prepared context only (no live Gmail/Calendar/Hospitable/Tasks/news calls at send time)
+- Hospitable degraded mode:
+  - if Hospitable is stale/failing, rental Gmail pipeline continues
+  - brief still generates
+  - health marks Hospitable as stale/error
+- Auth health degraded mode:
+  - if personal or rental token expires/revokes, auth health check detects within 30 min
+  - Telegram alert sent immediately (rate-limited 1/hour)
+  - morning brief surfaces auth-health: error in health + topAlerts
+  - pipelines continue running (may produce stale data until reauth)
+  - reauth runbook: docs/commands.txt (TOKEN REFRESH RUNBOOK section)
+- Freshness status is surfaced in health and topAlerts
+
+
+===== SCHEDULER (CRON) =====
+
+System cron: /etc/cron.d/openclaw-gws
+
+- personal review: */10
+- personal actions: */15
+- rental review: */10
+- rental actions: */15
+- hospitable fetch: */10
+- rental signal merge: 3,13,23,33,43,53
+- task lifecycle sync: */30
+- auth health check: */30 (as node, Telegram alert on degraded)
+
+OpenClaw cron:
+- morning brief: Mon-Fri 07:00
+- evening reset: Sun-Thu 21:15
+
+
+===== SUBAGENT STATUS =====
+
+Core OpenClaw subagent framework: LIVE (src/agents/*)
+
+Phase 3 rental subagent boundary: IMPLEMENTED IN CODE
+- file: src/phase3/subagents/rentalOpsSubagent.ts
+- purpose: orchestrate normalize -> merge -> lifecycle
+- status: NOT production-activated (activation rule still applies)
+
+Subagent activation prerequisites:
+- weekday Morning Brief validation passed
+- lifecycle dedupe stable
+- pipeline noise low/predictable
+- freshness/health trusted
+
+
+===== DATA FLOW (CURRENT) =====
+
+Personal Gmail summary (text)
+Rental Gmail summary (text)
+Hospitable events (json)
         ↓
-openclaw-morning-context script
+Rental signal merge
         ↓
-Context JSON (single source of truth)
-  - personal buckets: urgent, family, financial, shipping
-  - rental buckets: rental_maintenance, rental_guest, rental_financial, rental_urgent
-  - calendar: merged events from personal-gws + work ICS + personal-ics (not rental Calendar API unless wired)
-  - derived: topAlerts (personal + rental), focusCandidates (personal + rental)
+rental-events-context-latest.json
         ↓
-Cron job agent execution
+Task lifecycle sync
+        ↓
+task-lifecycle.json
+        ↓
+openclaw-morning-context
+        ↓
+morning-brief-context-latest.json
         ↓
 Telegram Morning Brief

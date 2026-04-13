@@ -1,0 +1,379 @@
+===== MORNING BRIEF — COMPLETE REFERENCE =====
+
+Last updated: Apr 1, 2026
+
+
+===== OVERVIEW =====
+
+The Morning Brief is a daily Telegram message delivered Mon-Fri at 07:00 CT.
+It aggregates calendar, Gmail, tasks, rental intelligence, and health data
+into a single scannable briefing.
+
+Topic routing policy (Phase 1):
+- Morning Brief primary route: `triage_digest` (Triage Digest forum topic)
+- Auth health primary route: `system_auth` (System/Auth forum topic)
+- Fallback behavior for topic-routed sends: retry once, then DM fallback with route marker
+
+Operator memory anchor:
+- Treat wrapper success as truth for Google auth health:
+  - /data/openclaw-gws/bin/gws-personal
+  - /data/openclaw-gws/bin/gws-rental
+- Do not use `gog auth list` as a proxy for this runtime.
+- If wrappers succeed as user `node`, auth is healthy even if other tooling shows no tokens.
+
+Two systems work together:
+1. openclaw-morning-context — a Python script that builds a JSON context file
+2. OpenClaw cron job — an LLM agent that reads the JSON and composes/sends the brief
+
+
+===== EXECUTION FLOW =====
+
+At 07:00 CT on weekdays, the OpenClaw cron scheduler triggers the morning-brief
+agent. The agent executes these steps in order:
+
+  Step 1: gws-personal calendar +agenda       (sanity check — confirms auth health)
+  Step 2: gws-rental calendar +agenda         (sanity check — confirms auth health)
+  Step 3: /data/openclaw-gws/bin/openclaw-morning-context   (builds the JSON)
+  Step 4: Read /data/openclaw-gws/output/morning-brief-context-latest.json
+  Step 5: Compose brief text from the JSON
+  Step 6: Deliver to Telegram route `triage_digest` (Triage Digest topic primary target)
+
+If any step fails, the agent still sends a brief with a status note explaining
+what failed, falling back to whatever data is available.
+
+The brief content is ALWAYS based on the context JSON. The agent must not make
+live ad hoc API calls for brief content.
+
+
+===== CRON JOB DEFINITION =====
+
+ID:         ce3cf461-3e58-49f0-8e64-e0b2b7b873bb
+Name:       morning-brief
+Schedule:   0 0 7 * * 1-5  (Mon-Fri 07:00)
+Timezone:   America/Chicago
+Session:    isolated (fresh agent session per run)
+Delivery:   announce → telegram → route `triage_digest` (Triage Digest topic primary)
+
+View:       openclaw cron list --json
+Run now:    openclaw cron run ce3cf461-3e58-49f0-8e64-e0b2b7b873bb --timeout 180000
+History:    openclaw cron runs --id ce3cf461-3e58-49f0-8e64-e0b2b7b873bb --limit 20
+
+
+===== CONTEXT BUILDER SCRIPT =====
+
+Path:       /data/openclaw-gws/bin/openclaw-morning-context
+Language:   Python 3
+Output:     /data/openclaw-gws/output/morning-brief-context-latest.json
+Schema:     morningBriefContext.v1.1
+
+The script aggregates data from multiple sources into a single JSON file.
+It does NOT send any messages — it only writes the JSON.
+
+--- Constants ---
+TZ                = America/Chicago
+OUTPUT_PATH       = /data/openclaw-gws/output/morning-brief-context-latest.json
+GWS_WRAPPER       = /data/openclaw-gws/bin/gws-personal
+TASK_LIST_ID      = NDRqWEpXa21ZWFNScGoxWg  (personal Google Tasks list)
+WORK_ICS_PATH     = /data/.openclaw/workspace/calendar/work.ics
+PERSONAL_ICS_PATH = /data/.openclaw/workspace/calendar/personal.ics
+RENTAL_CONTEXT    = /data/openclaw-gws/output/rental-events-context-latest.json
+TASK_LIFECYCLE    = /data/openclaw-gws/state/task-lifecycle.json
+HOSPITABLE        = /data/openclaw-gws/output/hospitable-events-latest.json
+
+
+===== DATA SOURCES (ingest order) =====
+
+1. Gmail review summaries (file read)
+   Personal: /data/openclaw-gws/output/gmail-review-summary-latest.txt
+   Rental:   /data/openclaw-gws/output/gmail-review-rental-summary-latest.txt
+   Parses structured text blocks into buckets: urgent, family, financial,
+   shipping, rental_maintenance, rental_guest, rental_financial, rental_urgent.
+
+2. Google Tasks (live API call)
+   Wrapper: gws-personal
+   Task list: NDRqWEpXa21ZWFNScGoxWg
+   Filters: only overdue, today, and soon (within 3 days)
+   Buckets: overdue / today / soon
+
+3. Personal Google Calendar (live API call)
+   Wrapper: gws-personal
+   Calendar: primary
+   Window: today + tomorrow (2-day window)
+   Events tagged: source=personal-gws
+
+4. Rental Google Calendar (live API call)
+   Wrapper: gws-rental (/data/openclaw-gws/bin/gws-rental)
+   Calendar: primary
+   Window: today + tomorrow (2-day window)
+   Events tagged: source=rental-gws
+   Note: returns 0 events when rental calendar is empty; still reports health
+
+5. Work ICS (file read)
+   Path: /data/.openclaw/workspace/calendar/work.ics
+   This calendar is not available via GWS — it must be supplied as an ICS file
+   on the agent workspace.
+   Events tagged: source=work
+
+6. Personal ICS (file read, optional fallback)
+   Path: /data/.openclaw/workspace/calendar/personal.ics
+   Events tagged: source=personal-ics
+
+7. Rental events context (file read, Phase 3)
+   Path: /data/openclaw-gws/output/rental-events-context-latest.json
+   Produced by: openclaw-rental-signal-merge
+   Populates: rentalOperations, rentalRiskRadar, rentalFocusCandidates, topAlerts
+
+8. Task lifecycle state (file read, Phase 3)
+   Path: /data/openclaw-gws/state/task-lifecycle.json
+   Produced by: openclaw-task-lifecycle-sync
+   Populates: escalatedTasks in rentalRiskRadar, topAlerts for escalated items
+
+9. Hospitable events (freshness check only)
+   Path: /data/openclaw-gws/output/hospitable-events-latest.json
+   Checks fetchedAt age. If older than 20 minutes → marks stale in health.
+   Data itself is consumed by the rental signal merge (source 7), not directly.
+
+10. Auth health (file read)
+    Path: /data/openclaw-gws/output/auth-health-latest.json
+    Produced by: openclaw-gws-auth-health-check (cron every 30 min, runs as node)
+    If status=degraded: adds "Auth degraded: ..." to topAlerts + health entry
+    If status=ok: adds health entry with last checked timestamp
+    If missing: adds health entry with status=missing
+
+11. News / RSS feeds (live fetch, inline in context builder)
+    Fetched by: build_news() inside openclaw-morning-context (no separate script)
+    Per feed: up to 5 items, 12-second timeout
+    Per category: deduped by link, capped at 10 items
+    Sports special handling: ensures at least 1 item per team/source before ESPN backfill
+
+    Category       Source                     URL
+    -----------    ----------------------     ---
+    usPolitics     NPR Politics               https://feeds.npr.org/1014/rss.xml
+                   The Hill                   https://thehill.com/feed/
+    middleEast     Al Jazeera                 https://www.aljazeera.com/xml/rss/all.xml?PostingId=2007722144444234906
+    southPadre     Port Isabel South Padre    https://www.portisabelsouthpadre.com/feed/
+    ev             InsideEVs                  https://insideevs.com/rss/news/all/
+                   The Verge Cars             https://www.theverge.com/rss/cars/index.xml
+    ai             TechCrunch AI              https://techcrunch.com/category/artificial-intelligence/feed/
+                   The Verge AI               https://www.theverge.com/rss/ai-artificial-intelligence/index.xml
+    tech           The Verge Tech             https://www.theverge.com/rss/tech/index.xml
+                   TechCrunch                 https://techcrunch.com/feed/
+    investing      CNBC Investing             https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=15839069
+                   BiggerPockets              https://www.biggerpockets.com/blog/feed/
+    sports         Rockets (Dream Shake)      https://www.thedreamshake.com/rss/current.xml
+                   Texans (Yardbarker)        https://www.yardbarker.com/rss/team/36
+                   Longhorns (Burnt Orange)   https://www.burntorangenation.com/rss/current.xml
+                   Astros (Crawfish Boxes)    https://www.crawfishboxes.com/rss/current.xml
+                   ESPN                       https://www.espn.com/espn/rss/news
+
+    Note: Austin FC and Manchester City (mentioned in the brief prompt) have no
+    dedicated feeds — they only surface via the ESPN general feed.
+
+    Error handling: per-feed errors are collected in inputs.news.errors[].
+    If any feeds fail: status = "partial". If all succeed: status = "fetched".
+
+
+===== DERIVED INTELLIGENCE =====
+
+After ingesting all sources, the script computes:
+
+- scheduleDensity: light / moderate / packed (based on event count and gaps)
+- conflicts: overlaps between events and routine blocks
+- topAlerts: urgent items from Gmail + rental + escalated tasks
+- focusCandidates: high-priority work suggestions for the brief
+- rentalFocusCandidates: rental-specific action items
+
+Routine blocks (assumed daily holds):
+  07:00–07:30  boys ready / school
+  07:30–08:15  workout
+
+
+===== HEALTH REPORTING =====
+
+Every source produces a health entry in context.health.sources[].
+
+Expected healthy output (14 entries):
+  gmail-review-summary-file:        ok
+  gmail-review-file:                present
+  gmail-rental-review-summary-file: ok
+  google-tasks:                     ok
+  personal-gws-calendar:            ok
+  work-gws-calendar:                ok
+  rental-gws-calendar:              ok
+  work-ics:                         present
+  personal-ics:                     present
+  news:                             ok
+  rental-context:                   ok
+  task-lifecycle:                   ok
+  hospitable:                       ok
+  auth-health:                      ok
+
+Possible error statuses: command_error, parse_error, missing, stale
+
+News troubleshooting:
+- News is fetched inline by build_news() inside openclaw-morning-context.
+  There is no separate openclaw-news-fetch script (earlier references were stale).
+- If `inputs.news.status` is "unavailable" or "partial", check
+  `inputs.news.errors[]` in the context JSON for per-feed failure details.
+- Common causes: DNS resolution failure inside container, feed URL returning
+  non-200, XML parse errors, or network timeout (12s per feed).
+- To rebuild context (including news): re-run the context builder:
+  `docker exec openclaw-ridl-openclaw-1 python3 /data/openclaw-gws/bin/openclaw-morning-context`
+
+Quick health check command:
+  docker exec openclaw-ridl-openclaw-1 python3 -c "
+    import json; d=json.load(open('/data/openclaw-gws/output/morning-brief-context-latest.json'))
+    print('generatedAt:', d['generatedAt'])
+    for s in d['health']['sources']:
+        print('  %s: %s, %s' % (s['name'], s.get('status'), (s.get('detail') or '')[:80]))
+  "
+
+
+===== OUTPUT JSON STRUCTURE =====
+
+{
+  kind:           "morningBriefContext.v1.1"
+  date:           "2026-03-23"
+  timezone:       "America/Chicago"
+  generatedAt:    ISO datetime
+
+  inputs:
+    calendar:
+      sources:    [{name, type, priority, status, ...}]
+      events:     [{uid, source, title, start, end, location, url, status}]
+    gmail:
+      sources:    [{name, type, path}]
+      status:     "loaded" | "unavailable"
+      urgent:     [{id, from, subject, ...}]
+      family:     [...]
+      financial:  [...]
+      shipping:   [...]
+      rental_maintenance: [...]
+      rental_guest:       [...]
+      rental_financial:   [...]
+      rental_urgent:      [...]
+    tasks:
+      sources:    [{name, type, status, ...}]
+      items:      [{id, title, due, status, source, bucket}]
+    routineBlocks: [{label, startLocal, endLocal}]
+    weather:      {status, summary}
+    news:         {status, categories: {us, middleEast, techEvAi, sports}}
+
+  rentalOperations:
+    arrivalsToday, departuresToday, cleaningsScheduled,
+    maintenanceRisks, revenueNotices, guestMessages
+
+  rentalRiskRadar:
+    urgentMaintenance, cleaningNotConfirmed, sameDayTurnoverRisk,
+    escalatedTasks, compoundRisks
+
+  rentalFocusCandidates: [string]
+
+  derived:
+    conflicts, scheduleDensity, focusCandidates, topAlerts
+
+  health:
+    sources: [{name, status, detail?, checkedAt}]
+}
+
+
+===== UPSTREAM DEPENDENCIES =====
+
+The context builder reads files produced by other cron-scheduled scripts.
+These must run BEFORE the morning brief to have fresh data:
+
+Script                          System cron     Writes
+---------                       -----------     ------
+openclaw-gws-review             */10            gmail-review-summary-latest.txt
+openclaw-gws-review-rental      */10            gmail-review-rental-summary-latest.txt
+openclaw-gws-act                */15            (labels + tasks)
+openclaw-gws-act-rental         */15            (labels + tasks)
+openclaw-hospitable-fetch       */10            hospitable-events-latest.json
+openclaw-rental-signal-merge    3,13,23,33,43,53  rental-events-context-latest.json
+openclaw-task-lifecycle-sync    */30            task-lifecycle.json
+
+The morning brief runs at 07:00, so all upstream jobs will have run multiple
+times before 07:00 and their output files will be fresh.
+
+The morning brief cron job also makes live GWS API calls (steps 1-3 above)
+for calendar and tasks — those are NOT dependent on upstream files.
+
+
+===== OPERATIONAL NOTES =====
+
+--- Container user model ---
+The OpenClaw gateway runs as user `node` (entrypoint: runuser -u node).
+All gateway-spawned subprocesses (morning-context, gws wrappers) run as `node`.
+docker exec defaults to root — this masks permission issues during manual testing.
+
+--- Credential ownership (CRITICAL) ---
+Credential files must be owned by node:node:
+  /data/openclaw-gws/config/credentials.json       (personal)
+  /data/openclaw-gws/config/rental-credentials.json (rental)
+
+After any credential deployment via docker cp:
+  chown node:node /data/openclaw-gws/config/credentials.json
+  chown node:node /data/openclaw-gws/config/rental-credentials.json
+
+Symptom of wrong ownership: manual docker exec calls succeed, but cron pipeline
+reports "command_error" / exit status 1 for all GWS calls.
+
+--- OAuth tokens ---
+Both GCP OAuth consent screens are in "In production" mode (Mar 2026).
+Refresh tokens no longer expire after 7 days.
+If a refresh token is revoked or invalidated, redeploy updated authorized_user
+credential files and re-run wrapper smoke tests as `node`.
+Full reauth runbook: docs/commands.txt (TOKEN REFRESH RUNBOOK section).
+
+--- Auth health alerting ---
+The auth health check (cron */30, runs as node) detects token failures.
+On degraded status:
+  - Writes auth-health-latest.json with status=degraded and failed check details
+  - Sends Telegram alert to 1460581318 (rate-limited: max 1 per hour)
+  - Morning brief includes auth-health in health sources and surfaces in topAlerts
+On recovery:
+  - Writes status=ok, clears Telegram alert cooldown
+  - Next failure will alert immediately
+
+--- Smoke test as node user ---
+docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/gws-personal calendar events list --params '{"calendarId":"primary","timeMin":"2026-03-23T00:00:00-05:00","timeMax":"2026-03-24T00:00:00-05:00","singleEvents":true,"orderBy":"startTime"}'
+
+--- Manual re-run (Option A — full pipeline via cron) ---
+From Mac:
+  ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 openclaw cron run ce3cf461-3e58-49f0-8e64-e0b2b7b873bb --timeout 180000"
+
+--- Manual re-run (Option B — context only, no Telegram send) ---
+From Mac:
+  ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/openclaw-morning-context"
+
+Then inspect:
+  ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 python3 -c \"import json; d=json.load(open('/data/openclaw-gws/output/morning-brief-context-latest.json')); print('generated:', d['generatedAt']); print('events:', len(d['inputs']['calendar']['events'])); print('tasks:', len(d['inputs']['tasks']['items']))\""
+
+--- Logs ---
+Cron run history:
+  openclaw cron runs --id ce3cf461-3e58-49f0-8e64-e0b2b7b873bb --limit 20
+Container logs:
+  docker logs --since 2h openclaw-ridl-openclaw-1
+Context builder stderr:
+  docker exec openclaw-ridl-openclaw-1 tail -200 /tmp/openclaw-morning-context.log
+
+
+===== BRIEF FORMAT (agent prompt) =====
+
+The cron agent composes the brief in this format:
+
+1. Today at a glance (day/date, weather if available)
+2. Calendar (chronological, conflicts with routine blocks highlighted)
+3. Focus plan (3 bullets: 1-2 work + 1 personal/rental)
+4. News (2-3 bullets per category: US, Middle East, Tech/EV/AI, Sports)
+5. Reminders (tasks, Apple Reminders status)
+
+CTA: "Reply with: (1) top priority today, (2) anything I should add to Reminders."
+
+Sports teams tracked: Longhorns, Rockets, Texans, Astros, Austin FC, Manchester City.
+
+If context build failed, the agent states what failed and falls back to
+whatever data is available (e.g. "Context build failed; using last generated context").
+
+
+===== END OF DOCUMENT =====
