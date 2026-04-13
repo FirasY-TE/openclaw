@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BASE_DIR="/data/openclaw-gws"
+LOG_FILE="${BASE_DIR}/output/auth-health-check.log"
+OUTPUT_FILE="${BASE_DIR}/output/auth-health-latest.json"
+TMP_FILE="${OUTPUT_FILE}.tmp"
+ALERT_COOLDOWN_FILE="${BASE_DIR}/output/.auth-alert-last-sent"
+ALERT_COOLDOWN_SECONDS=3600  # don't re-alert more than once per hour
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck source=/dev/null
+source "${SCRIPT_DIR}/lib/telegram-topic-routing.sh"
+
+mkdir -p "${BASE_DIR}/output"
+
+timestamp() {
+  date -u +"%Y-%m-%dT%H:%M:%SZ"
+}
+
+log() {
+  echo "[$(timestamp)] $*" >> "${LOG_FILE}"
+}
+
+check_wrapper() {
+  local name="$1"
+  local wrapper="$2"
+
+  local raw
+  raw="$("$wrapper" gmail users getProfile --params '{"userId":"me"}' 2>&1 || true)"
+
+  if printf "%s" "$raw" | jq -e '.error.code == 401 and (.error.reason // "") == "authError"' >/dev/null 2>&1; then
+    local msg
+    msg="$(printf "%s" "$raw" | jq -r '.error.message // "authError"')"
+    jq -n \
+      --arg name "$name" \
+      --arg checkedAt "$(timestamp)" \
+      --arg status "error" \
+      --arg detail "$msg" \
+      '{name:$name, checkedAt:$checkedAt, status:$status, detail:$detail}'
+    return 0
+  fi
+
+  if printf "%s" "$raw" | jq -e '.emailAddress? // .email? // empty' >/dev/null 2>&1; then
+    local email
+    email="$(printf "%s" "$raw" | jq -r '.emailAddress // .email // "unknown"')"
+    jq -n \
+      --arg name "$name" \
+      --arg checkedAt "$(timestamp)" \
+      --arg status "ok" \
+      --arg detail "authenticated as ${email}" \
+      '{name:$name, checkedAt:$checkedAt, status:$status, detail:$detail}'
+    return 0
+  fi
+
+  jq -n \
+    --arg name "$name" \
+    --arg checkedAt "$(timestamp)" \
+    --arg status "unknown" \
+    --arg detail "$(printf "%s" "$raw" | tr '\n' ' ' | cut -c1-400)" \
+    '{name:$name, checkedAt:$checkedAt, status:$status, detail:$detail}'
+}
+
+log "INFO: starting auth health check"
+
+PERSONAL_JSON="$(check_wrapper "gws-personal" "/data/openclaw-gws/bin/gws-personal")"
+RENTAL_JSON="$(check_wrapper "gws-rental" "/data/openclaw-gws/bin/gws-rental")"
+
+STATUS="ok"
+if [[ "$(printf "%s" "$PERSONAL_JSON" | jq -r '.status')" != "ok" ]] || [[ "$(printf "%s" "$RENTAL_JSON" | jq -r '.status')" != "ok" ]]; then
+  STATUS="degraded"
+fi
+
+jq -n \
+  --arg generatedAt "$(timestamp)" \
+  --arg status "$STATUS" \
+  --arg note "Checks wrapper auth health using Gmail getProfile for personal+rental." \
+  --argjson personal "$PERSONAL_JSON" \
+  --argjson rental "$RENTAL_JSON" \
+  '{
+    kind: "openclawAuthHealth.v1",
+    generatedAt: $generatedAt,
+    status: $status,
+    note: $note,
+    checks: [$personal, $rental]
+  }' > "$TMP_FILE"
+
+mv "$TMP_FILE" "$OUTPUT_FILE"
+
+if [[ "$STATUS" == "ok" ]]; then
+  log "INFO: auth health check OK"
+  # Clear cooldown on recovery so next failure alerts immediately
+  rm -f "${ALERT_COOLDOWN_FILE}"
+else
+  log "WARN: auth health degraded; see ${OUTPUT_FILE}"
+
+  # Build alert summary from failed checks
+  FAILED_NAMES="$(jq -r '.checks[] | select(.status != "ok") | .name' "$OUTPUT_FILE" | tr '\n' ', ' | sed 's/,$//')"
+
+  # Rate-limit: only send Telegram if cooldown has elapsed
+  SHOULD_ALERT=true
+  if [[ -f "${ALERT_COOLDOWN_FILE}" ]]; then
+    LAST_SENT="$(cat "${ALERT_COOLDOWN_FILE}")"
+    NOW_EPOCH="$(date +%s)"
+    if (( NOW_EPOCH - LAST_SENT < ALERT_COOLDOWN_SECONDS )); then
+      SHOULD_ALERT=false
+      log "INFO: skipping Telegram alert (cooldown active, last sent ${LAST_SENT})"
+    fi
+  fi
+
+  if [[ "$SHOULD_ALERT" == "true" ]]; then
+    ALERT_MSG="⚠️ [auth-health] Auth health degraded: ${FAILED_NAMES}. Tokens may need refresh. Run reauth runbook (see docs/commands.txt)."
+    if send_with_topic_fallback "system_auth" "${ALERT_MSG}" >/dev/null 2>&1; then
+      date +%s > "${ALERT_COOLDOWN_FILE}"
+      log "INFO: Telegram alert sent for degraded auth"
+    else
+      log "WARN: Telegram alert send failed"
+    fi
+  fi
+fi
