@@ -1,4 +1,11 @@
-# OpenClaw Personal AI System — Phase 4+
+# OpenClaw Personal AI System — Unified Inbox Roadmap
+
+> Legacy note: "Phase 1-3" throughout this document refers to the **pre-roadmap**
+> OpenClaw phases that built the original scheduled email/task pipeline (Gmail
+> review, Google Tasks, Hospitable fetch, morning brief, auth health, etc.).
+> Those are distinct from the Phase 1-5 numbering in `ROADMAP.md`, which
+> covers Milestone 1 of this roadmap (Forum Topics, Triage, Beeper, Hospitable
+> Intelligence, Orchestrator). See `ROADMAP.md` for current phases.
 
 ## What This Is
 
@@ -12,7 +19,7 @@ One inbox that cuts through the noise across all communication sources — surfa
 
 ### Validated
 
-- ✓ Gmail review and classification (personal + rental) — existing, Phase 1-3
+- ✓ Gmail review and classification (personal + rental) — existing, legacy Phase 1-3
 - ✓ Google Tasks creation and lifecycle tracking — existing
 - ✓ Hospitable booking/reservation/message fetch — existing
 - ✓ Rental signal merge and compound risk detection — existing
@@ -58,12 +65,12 @@ One inbox that cuts through the noise across all communication sources — surfa
 
 ## Context
 
-### Current System (Phase 3 complete)
+### Current System (legacy Phase 3 complete)
 
 The VPS runs a pipeline of 9 specialized scripts under cron that handle Gmail review, classification, task creation, Hospitable fetch, rental signal merge, task lifecycle sync, auth health monitoring, and morning brief assembly. Data flows through JSON/text files in `/data/openclaw-gws/output/`. The morning brief is delivered via Telegram at 7:00 AM weekdays. An evening reset runs Sun-Thu at 9:15 PM.
 
 See `docs/agent-architecture.txt` for the full live agent chain and data flow.
-See `docs/project-state.txt` for system state through Phase 3.
+See `docs/project-state.txt` for system state through legacy Phase 3.
 See `docs/cron-jobs.txt` for all scheduled jobs.
 
 ### Runtime Architecture
@@ -103,23 +110,24 @@ Current scripts are effectively single-purpose agents. The expansion naturally s
 
 ## Key Decisions
 
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| VPS stays as primary brain | Established infrastructure, persistent state, cron system | ✓ Good |
-| Mac node for Beeper operations | Beeper Desktop API is localhost-only; iMessage requires macOS | ✓ Good |
-| Telegram as primary delivery UI | Already configured, inline buttons work, user is there | ✓ Good |
-| Telegram Forum Topics for channel separation | Keeps one app, adds topic-based routing to avoid noisy single DM | — Pending |
-| Google Tasks as unified task/reminder system | Existing pipeline, dedupe logic, two task lists already configured | ✓ Good |
-| Hospitable API as booking data source | Aggregates Airbnb + VRBO + pricing app | ✓ Good |
-| Incremental multi-agent migration | Avoid big-bang rewrite; orchestrator first, subagents as domains stabilize | — Pending |
-| Draft-first for email and Beeper | Safety; auto-send only for defined Hospitable categories | — Pending |
-| Knowledge base approach for Hospitable | RAG/vector DB vs structured docs — depends on data volume investigation | — Pending |
+| Decision                                     | Rationale                                                                  | Outcome   |
+| -------------------------------------------- | -------------------------------------------------------------------------- | --------- |
+| VPS stays as primary brain                   | Established infrastructure, persistent state, cron system                  | ✓ Good    |
+| Mac node for Beeper operations               | Beeper Desktop API is localhost-only; iMessage requires macOS              | ✓ Good    |
+| Telegram as primary delivery UI              | Already configured, inline buttons work, user is there                     | ✓ Good    |
+| Telegram Forum Topics for channel separation | Keeps one app, adds topic-based routing to avoid noisy single DM           | — Pending |
+| Google Tasks as unified task/reminder system | Existing pipeline, dedupe logic, two task lists already configured         | ✓ Good    |
+| Hospitable API as booking data source        | Aggregates Airbnb + VRBO + pricing app                                     | ✓ Good    |
+| Incremental multi-agent migration            | Avoid big-bang rewrite; orchestrator first, subagents as domains stabilize | — Pending |
+| Draft-first for email and Beeper             | Safety; auto-send only for defined Hospitable categories                   | — Pending |
+| Knowledge base approach for Hospitable       | RAG/vector DB vs structured docs — depends on data volume investigation    | — Pending |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 **After each phase transition** (via `/gsd-transition`):
+
 1. Requirements invalidated? → Move to Out of Scope with reason
 2. Requirements validated? → Move to Validated with phase reference
 3. New requirements emerged? → Add to Active
@@ -127,10 +135,12 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? → Update if drifted
 
 **After each milestone** (via `/gsd-complete-milestone`):
+
 1. Full review of all sections
 2. Core Value check — still the right priority?
 3. Audit Out of Scope — reasons still valid?
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-08 after initialization*
+
+_Last updated: 2026-04-13 — clarified legacy Phase 1-3 references vs roadmap Phase 1-5_
