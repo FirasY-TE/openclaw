@@ -176,6 +176,68 @@ class TestTriageDigest(unittest.TestCase):
             ):
                 self.assertIn(key, token_state)
 
+    def test_hospitable_dict_sender_renders_full_name_without_repr_leak(self) -> None:
+        # Regression: `sender` in the real Hospitable payload is a dict; the
+        # digest line must resolve it to full_name/first_name and never leak
+        # raw Python dict repr (e.g. "{'first_name': ...}").
+        msg = {
+            "id": "hmsg-x",
+            "sender": {
+                "first_name": "Jaclyn",
+                "full_name": "Jaclyn Yacoub",
+                "locale": "",
+                "picture_url": "https://example.invalid/jaclyn.jpg",
+            },
+            "reservation_id": "res-100",
+            "body": "Can we get an early check-in around 1pm?",
+            "direction": "guest",
+            "unread": True,
+            "created_at": "2026-04-13T17:15:00-05:00",
+        }
+        line = tdb._summary_line_hospitable(msg)
+        self.assertIn("Jaclyn Yacoub", line)
+        self.assertIn("early check-in", line)
+        self.assertNotIn("{'", line)
+        self.assertNotIn("first_name", line)
+
+    def test_hospitable_dict_sender_first_name_fallback(self) -> None:
+        # When full_name is missing, fall back to first_name — still no dict repr.
+        msg = {
+            "id": "hmsg-y",
+            "sender": {"first_name": "Jaclyn", "locale": ""},
+            "reservation_id": "res-101",
+            "body": "Quick question about parking.",
+            "direction": "guest",
+            "unread": True,
+            "created_at": "2026-04-13T17:30:00-05:00",
+        }
+        line = tdb._summary_line_hospitable(msg)
+        self.assertIn("Jaclyn", line)
+        self.assertNotIn("{'", line)
+        self.assertNotIn("first_name", line)
+
+    def test_hospitable_slice_digest_has_no_dict_repr_leak(self) -> None:
+        # End-to-end: run the digest builder against the hospitable fixture and
+        # assert the rendered markdown's Hospitable section contains the real
+        # guest name and no dict-repr leak.
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            out = tmp / "output"
+            out.mkdir()
+            shutil.copy(FIXTURES / "hospitable-events-slice.json", out / "hospitable-events-latest.json")
+
+            now = tdb._parse_now_iso("2026-04-13T20:00:00-05:00")
+            meta, items = tdb.build_items(tmp, now=now)
+            hosp_items = [it for it in items if it["source"] == "hospitable"]
+            self.assertGreaterEqual(len(hosp_items), 2, "fixture should yield both hospitable messages in window")
+
+            md = tdb.render_markdown(meta, items)
+            self.assertIn("### Hospitable", md)
+            self.assertIn("Jaclyn Yacoub", md)
+            self.assertNotIn("{'", md)
+            self.assertNotIn("first_name", md)
+            self.assertNotIn("picture_url", md)
+
     def test_needs_reply_bucket_still_renders_after_callback_removal(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             tmp = Path(td)
