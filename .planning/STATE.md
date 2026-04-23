@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 02.1-02-PLAN.md
-last_updated: "2026-04-23T04:17:50.975Z"
+status: executing
+stopped_at: Completed 02.1.1-01-PLAN.md (Hospitable dict-leak fix + VPS deploy)
+last_updated: "2026-04-23T05:01:09.788Z"
 last_activity: 2026-04-23
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 6
-  percent: 33
+  total_plans: 9
+  completed_plans: 7
+  percent: 78
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-08)
 
 **Core value:** One inbox that cuts through noise across communication sources — triage, drafts, and approvals so nothing important is missed.
-**Current focus:** Phase 02.1 — Triage Simplification (Plan C pivot)
+**Current focus:** Phase 02.1.1 — Triage Digest Context & Rendering Fixes
 
 ## Current Position
 
-Phase: 02.1 (Triage Simplification (Plan C pivot)) — EXECUTING
+Phase: 02.1.1 (Triage Digest Context & Rendering Fixes) — EXECUTING
 Plan: 2 of 2
-Status: Phase complete — ready for verification
+Status: Ready to execute
 Last activity: 2026-04-23
 
-Progress: [███░░░░░░░] 33%
+Progress: [████████░░] 78%
 
 ## Accumulated Context
 
@@ -44,16 +44,20 @@ Progress: [███░░░░░░░] 33%
 - [Phase 02.1]: Escalate response-required subject phrases to DraftNeeded: maybe in both personal and rental review scripts.
 - [Phase 02.1]: Render per-item digest tokens inline and standardize finalization hints on /bash tdr send-now <token> and /bash tdr save <token>.
 - [Phase 02.1]: Use scripts/deploy/prompts/triage-draft-runbook.md as the canonical triage behavior tuning surface.
+- **[Phase 02.1.1, 2026-04-23]:** Two live-UAT gaps identified after 02.1 completed: (1) Hospitable digest lines render raw Python dict repr because `sender` is a dict and `str(sender)` was used; (2) main agent has no email body context when asked to draft in-thread because digest only includes BodySummary. Decision: Option A — inline full email body as Markdown blockquote in digest for `needs_reply` items. Rejected Option B (`tdr show` subcommand) because it reintroduces soft-dependency failure class 02.1 was meant to remove.
+- **[Phase 02.1.1 process lesson]:** Every plan now explicitly mirrors `openclaw/scripts/deploy/**` changes to `openclaw-ops/vps/scripts/**` and verifies live VPS deploy before completing. This closes the process gap from 02.1-02 where the ops mirror was missed and the classifier fix didn't go live.
+- [Phase 02.1.1]: Hospitable digest: resolve dict sender via full_name→first_name→name helper chain; preview prefers body→preview→text; string-only coercion prevents Python dict repr leak in Telegram digest.
 
 ### Blockers/Concerns
 
 - `openclaw-ops/vps/patches/0001-telegram-triage-auto-route.patch` was not reliably staying installed across compose recreates. Rather than fix, we are removing the patch entirely under Phase 02.1.
-- Triage items classified as `DraftNeeded: no` for external senders with "Response Required"-style subjects (rule-based classifier gap — tracked in 02.1 backlog).
+- Triage items classified as `DraftNeeded: no` for external senders with "Response Required"-style subjects — **addressed in 02.1-02 source tree, now fixed on VPS as of 2026-04-23 mirror deploy**.
+- Hospitable digest rendering + agent drafting context — captured in Phase 02.1.1, ready to execute.
 
 ## Session Continuity
 
-**Last session:** 2026-04-23T04:17:50.967Z
-**Last Date:** 2026-04-23T04:17:50.967Z
-**Stopped At:** Completed 02.1-02-PLAN.md
+**Last session:** 2026-04-23T05:00:42.464Z
+**Last Date:** 2026-04-23T05:00:42.464Z
+**Stopped At:** Completed 02.1.1-01-PLAN.md (Hospitable dict-leak fix + VPS deploy)
 **Resume File:** None
-**Resume hint:** next session, run `gsd-plan-phase` against Phase 02.1 (or say "start phase 02.1")
+**Resume hint:** next session, run `/gsd-execute-phase 02.1.1` (or say "start phase 02.1.1")

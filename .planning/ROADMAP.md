@@ -106,8 +106,48 @@ Plans:
 
 Plans:
 
-- [ ] `02-1-01-PLAN.md` — Remove triage auto-router/callback stack and preserve digest + `tdr` finalization baseline
-- [ ] `02-1-02-PLAN.md` — Add classifier/token/runbook simplification layer and patched-core retirement checks
+- [x] `02-1-01-PLAN.md` — Remove triage auto-router/callback stack and preserve digest + `tdr` finalization baseline
+- [x] `02-1-02-PLAN.md` — Add classifier/token/runbook simplification layer and patched-core retirement checks
+
+---
+
+### Phase 02.1.1: Triage Digest Context & Rendering Fixes (Plan C gap closure)
+
+**Goal:** Close the two live-UAT gaps from Phase 02.1 that prevent the simplified Plan C flow from actually working: (1) Hospitable digest lines leak raw Python dict repr, and (2) the main agent has no email body context when asked to draft in-thread.
+
+**Why:** Phase 02.1 passed automated verification but failed live operator testing on 2026-04-23. Bella correctly responded _"I can draft it, but I don't actually see the email content in this thread"_ because the digest only surfaces a truncated BodySummary. Decision locked 2026-04-23: inline the full email body in the digest (Option A) rather than add a `tdr show` subcommand (Option B), because Option A eliminates the soft-dependency failure class that 02.1 was created to remove.
+
+**Requirements:**
+
+- Hospitable digest lines render a readable guest name + preview (never raw Python dict repr)
+- Needs-reply digest items include the full email body inline as a Markdown blockquote beneath summary + token + finalize lines
+- Main agent, when asked to draft in-thread, has all context in the thread (no external fetch, no `tdr show`, no paste)
+- Digest includes a single italic header-line affordance at the top of the Needs-attention section listing the operator verbs Bella recognizes in-thread (`draft <name>`, `ignore <name>`, `summary`) — text only, never a callback/button, never per-item
+- Every plan mirrors changes into `openclaw-ops/vps/scripts/` and verifies live VPS behavior before completing — closing the ops-mirror process gap from Phase 02.1-02
+
+**Success criteria:**
+
+- Telegram digest contains zero `{'` substrings in Hospitable section
+- Needs-reply Gmail items show a `> `-prefixed blockquote with real email body in the digest
+- Operator can ask Bella to draft in-thread and get usable text with no "I don't see the email" responses
+- Source tree (`openclaw/scripts/deploy/`) and ops tree (`openclaw-ops/vps/scripts/`) are byte-identical for changed files after each plan
+
+**UAT:**
+
+- [ ] Digest renders `[Hospitable] Jaclyn Yacoub (res ...): <preview>` style, never a raw dict repr
+- [ ] A real "Response Required" test email produces a digest with a Markdown blockquote containing the full email body
+- [ ] Digest includes exactly one italic line at the top of Needs-attention listing `draft <name>`, `ignore <name>`, `summary` verbs
+- [ ] Operator asks Bella to draft in-thread; Bella produces a usable reply using only thread context (no paste, no tool calls)
+- [ ] Operator says "ignore <name>" and Bella acknowledges without minting a draft
+- [ ] `/bash tdr send-now <token>` still delivers a real email end-to-end
+- [ ] `diff -q scripts/deploy/lib/triage_digest_build.py ../openclaw-ops/vps/scripts/lib/triage_digest_build.py` returns empty after final plan
+
+**Plans:** 2 plans
+
+Plans:
+
+- [x] `02-1-1-01-PLAN.md` — Fix Hospitable dict-leak in digest; mirror to openclaw-ops and deploy
+- [ ] `02-1-1-02-PLAN.md` — Inline full email body as blockquote for needs_reply items; update runbook; mirror to openclaw-ops and deploy
 
 ---
 
@@ -246,16 +286,17 @@ Plans:
 
 ## Status
 
-| Phase | Status           | Notes                                                     |
-| ----- | ---------------- | --------------------------------------------------------- |
-| 1     | Completed        | Foundation — topic routing live                           |
-| 2     | Partial          | Plans 02-01 and 02-02 completed; 02-03 superseded by 02.1 |
-| 02.1  | Context captured | Plan C pivot — simplify triage draft surface              |
-| 02.2  | Not started      | Version alignment across local, VPS, and Mac GUI          |
-| 3     | Not started      | Prior Beeper design work available                        |
-| 4     | Not started      | API investigation needed early                            |
-| 5     | Not started      | After Phases 2-4 stabilize                                |
+| Phase  | Status                                 | Notes                                                                         |
+| ------ | -------------------------------------- | ----------------------------------------------------------------------------- |
+| 1      | Completed                              | Foundation — topic routing live                                               |
+| 2      | Partial                                | Plans 02-01 and 02-02 completed; 02-03 superseded by 02.1                     |
+| 02.1   | Implementation done; UAT surfaced gaps | Plan C pivot — simplify triage draft surface; live UAT blocked by 02.1.1 gaps |
+| 02.1.1 | Executing                              | Plan 01 complete (dict-leak fix shipped + verified live); Plan 02 pending     |
+| 02.2   | Not started                            | Version alignment across local, VPS, and Mac GUI                              |
+| 3      | Not started                            | Prior Beeper design work available                                            |
+| 4      | Not started                            | API investigation needed early                                                |
+| 5      | Not started                            | After Phases 2-4 stabilize                                                    |
 
 ---
 
-_Last updated: 2026-04-22_
+_Last updated: 2026-04-23 (02.1.1-01 complete)_
