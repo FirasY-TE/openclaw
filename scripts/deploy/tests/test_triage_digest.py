@@ -152,6 +152,7 @@ class TestTriageDigest(unittest.TestCase):
             self.assertTrue(meta["draftTokens"], "needs_reply rows should mint tokens for tdr")
             first_token = meta["draftTokens"][0]
             token_state = by_token[first_token]
+            self.assertIn("draftTokenByMessageId", meta)
             self.assertIn("gmailMessageId", token_state)
             self.assertTrue(token_state["gmailMessageId"])
             self.assertIn("account", token_state)
@@ -159,6 +160,9 @@ class TestTriageDigest(unittest.TestCase):
             self.assertNotIn("lastDraftText", token_state)
             self.assertNotIn("tgd" + ":", md)
             self.assertNotIn("callback_data", md)
+            self.assertIn(f"(token: `{first_token}`)", md)
+            self.assertIn("/bash tdr send-now <token>", md)
+            self.assertIn("/bash tdr save <token>", md)
             for key in (
                 "account",
                 "gmailMessageId",

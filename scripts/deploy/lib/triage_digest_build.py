@@ -339,12 +339,25 @@ def render_markdown(meta: dict[str, Any], items: list[dict[str, Any]]) -> str:
                 continue
             out.append(f"### {sublabels[src]}")
             for it in sub:
-                out.append(f"- {it['summaryLine']}")
+                line = it["summaryLine"]
+                token = None
+                if cat == "needs_reply" and src in ("personal_gmail", "rental_gmail"):
+                    refs = it.get("refs") if isinstance(it.get("refs"), dict) else {}
+                    mid = refs.get("gmailMessageId")
+                    if mid:
+                        token = (meta.get("draftTokenByMessageId") or {}).get(mid)
+                if token:
+                    line = f"{line} (token: `{token}`)"
+                out.append(f"- {line}")
                 body = it.get("bodySummary")
                 if body:
                     # Indented continuation so the bullet stays readable and the
                     # operator has enough context to decide without opening Gmail.
                     out.append(f"  {body}")
+                if token:
+                    out.append(
+                        "  _Finalize when ready: `/bash tdr send-now <token>` or `/bash tdr save <token>`._"
+                    )
         if hidden > 0:
             out.append(
                 f"+{hidden} more items omitted (cap {CAP_PER_CATEGORY}); run on-demand `/triage` or `openclaw triage` for full detail."
@@ -398,6 +411,11 @@ def run_build(
     meta, items = build_items(base_dir, now=now)
     by_token = build_draft_state(items)
     meta["draftTokens"] = list(by_token.keys())
+    meta["draftTokenByMessageId"] = {
+        str(state.get("gmailMessageId")): token
+        for token, state in by_token.items()
+        if state.get("gmailMessageId")
+    }
     md = render_markdown(meta, items)
     return meta, md, by_token
 
