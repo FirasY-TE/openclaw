@@ -23,6 +23,22 @@ FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "triage"
 
 
 class TestTriageDigest(unittest.TestCase):
+    def test_personal_review_script_escalates_response_required_subjects(self) -> None:
+        script = Path(__file__).resolve().parents[1] / "openclaw-gws-review-test"
+        text = script.read_text(encoding="utf-8").lower()
+        for phrase in ("response required", "please reply", "let me know", "please advise"):
+            self.assertIn(phrase, text)
+        self.assertIn("if not is_promo and any(sig in subj for sig in response_required_signals):", text)
+        self.assertIn('draft = "maybe"', text)
+
+    def test_rental_review_script_escalates_response_required_subjects(self) -> None:
+        script = Path(__file__).resolve().parents[1] / "openclaw-gws-review-rental-test"
+        text = script.read_text(encoding="utf-8").lower()
+        for phrase in ("response required", "please reply", "let me know", "please advise"):
+            self.assertIn(phrase, text)
+        self.assertIn("if not is_promo and any(sig in subj for sig in response_required_signals):", text)
+        self.assertIn('draft = "maybe"', text)
+
     def test_urgent_wins_over_needs_reply(self) -> None:
         fields = {
             "Priority": "urgent",
