@@ -1,0 +1,220 @@
+#!/usr/bin/env bash
+set -euo pipefail
+GWS="/data/openclaw-gws/bin/gws-personal"
+VIP="/data/openclaw-gws/config/family-vip-senders.txt"
+RENTAL_VENDORS="/data/openclaw-gws/config/rental-vendor-senders.txt"
+OUT="/data/openclaw-gws/output/gmail-review-test-latest.txt"
+TMP="$(mktemp)"
+trap 'rm -f "$TMP"' EXIT
+
+MSG_ID="${1:?usage: openclaw-gws-review-test MESSAGE_ID}"
+
+"$GWS" gmail users messages get --params "{\"userId\":\"me\",\"id\":\"$MSG_ID\",\"format\":\"full\"}" > "$TMP"
+
+python3 - <<'INNER' "$TMP" "$VIP" "$RENTAL_VENDORS" "$OUT" "$MSG_ID"
+import base64, json, sys, re, pathlib
+tmp, vipf, rental_vendors_f, out, msg_id = sys.argv[1:6]
+data = json.load(open(tmp))
+payload = data.get("payload", {}) or {}
+headers = {h.get("name","").lower(): h.get("value","") for h in payload.get("headers",[])}
+sender = headers.get("from","")
+subject = headers.get("subject","")
+date = headers.get("date","")
+m = re.search(r'<([^>]+)>', sender)
+email = m.group(1) if m else sender.strip()
+labels = ", ".join(data.get("labelIds", []))
+
+# Body extraction: prefer text/plain; fall back to text/html (tags stripped);
+# final fallback is Gmail's snippet. Matches the helper used in the draft agent.
+def _b64url_decode(raw: str) -> str:
+    if not raw:
+        return ""
+    padded = raw + "=" * ((4 - len(raw) % 4) % 4)
+    try:
+        return base64.urlsafe_b64decode(padded).decode("utf-8", errors="replace")
+    except Exception:
+        return ""
+
+def _extract_text(part: dict) -> str:
+    mime = (part.get("mimeType") or "").lower()
+    if mime == "text/plain":
+        return _b64url_decode((part.get("body") or {}).get("data", ""))
+    if mime == "text/html":
+        html = _b64url_decode((part.get("body") or {}).get("data", ""))
+        return re.sub(r"<[^>]+>", " ", html) if html else ""
+    for sub in part.get("parts", []) or []:
+        found = _extract_text(sub)
+        if found:
+            return found
+    return ""
+
+body_raw = _extract_text(payload) or data.get("snippet", "") or ""
+# Trim reply/forward tails so the preview focuses on the new content.
+body_trimmed = re.split(
+    r"(?m)^(?:On\s+\w+.*wrote:|-----Original Message-----|From:\s.*Sent:)",
+    body_raw,
+    maxsplit=1,
+)[0]
+# Drop bare URLs — HTML-only newsletters otherwise produce pure tracker soup.
+body_nourl = re.sub(r"https?://\S+", "", body_trimmed)
+body_clean = re.sub(r"\s+", " ", body_nourl).strip()
+BODY_MAX = 350
+body_summary = body_clean[:BODY_MAX] + ("…" if len(body_clean) > BODY_MAX else "")
+
+RENTAL_TASK_LIST = "clBVU3IyeDFBTXdUSC1jRQ"
+PERSONAL_TASK_LIST = "NDRqWEpXa21ZWFNScGoxWg"
+
+def load_sender_list(path):
+    p = pathlib.Path(path)
+    if not p.exists():
+        return []
+    return [x.strip().lower() for x in p.read_text().splitlines()
+            if x.strip() and not x.strip().startswith("#")]
+
+def sender_matches(email_addr, sender_list):
+    for item in sender_list:
+        if item.startswith("@") and email_addr.endswith(item):
+            return True
+        elif email_addr == item:
+            return True
+    return False
+
+vips = load_sender_list(vipf)
+rental_vendors = load_sender_list(rental_vendors_f)
+
+email_l = email.lower()
+subj = subject.lower()
+labels_l = labels.lower()
+
+family = "yes" if sender_matches(email_l, vips) else "no"
+is_rental_vendor = sender_matches(email_l, rental_vendors)
+
+priority = "info"
+tasklist = "none"
+createtask = "no"
+calendarprompt = "no"
+draft = "no"
+alert = "no"
+
+mailbox = "personal"
+mailbox_type = "primary"
+account_context = "personal"
+
+if family == "yes":
+    priority = "family"
+    tasklist = PERSONAL_TASK_LIST
+
+is_promo = "category_promotions" in labels_l or "category_social" in labels_l
+response_required_signals = [
+    "response required",
+    "please reply",
+    "let me know",
+    "please advise",
+]
+
+rental_signals = [
+    "hospitable.com",
+    "airbnb",
+    "vrbo",
+    "guest",
+    "reservation",
+    "check-in",
+    "checkout",
+    "cleaning",
+    "arrival",
+    "departure",
+    "task tomorrow",
+    "private pool",
+    "beach"
+]
+
+if is_rental_vendor or any(sig in email_l or sig in subj for sig in rental_signals):
+    mailbox = "rentals"
+    mailbox_type = "delegated"
+    account_context = "rental"
+
+transaction_domains = [
+    "venmo.com",
+    "apple.com",
+    "fedex.com",
+    "ups.com",
+    "usps.com",
+    "amazon.com",
+    "chase.com",
+    "wellsfargo.com",
+]
+
+# --- Rental vendor invoices/statements → rental task list ---
+invoice_signals = ["invoice", "statement", "payment due", "amount due", "balance due", "bill"]
+if is_rental_vendor and any(sig in subj for sig in invoice_signals):
+    priority = "medium"
+    tasklist = RENTAL_TASK_LIST
+    createtask = "yes"
+    alert = "no"
+    mailbox = "rentals"
+    account_context = "rental"
+
+# --- Appointment confirmations → calendar event (no task) ---
+appointment_signals = [
+    "your appointment",
+    "appointment is coming up",
+    "appointment confirmation",
+    "appointment reminder",
+    "appointment scheduled",
+    "booking confirmed",
+    "booking confirmation",
+    "your reservation is confirmed",
+    "your booking is confirmed",
+]
+if not is_promo and any(sig in subj for sig in appointment_signals):
+    calendarprompt = "yes"
+
+# --- Escalation chain (only overrides if not already set above) ---
+if createtask != "yes":
+    if email_l == "delegation-noreply@google.com" and "granted you access" in subj:
+        priority, tasklist, createtask, alert = "urgent", RENTAL_TASK_LIST, "yes", "yes"
+    elif email_l == "no-reply@accounts.google.com" and "security alert" in subj:
+        priority, tasklist, createtask, alert = "urgent", PERSONAL_TASK_LIST, "yes", "yes"
+    elif any(email_l.endswith("@" + d) or email_l.endswith(d) for d in transaction_domains):
+        priority, createtask, alert, draft = "info", "no", "no", "no"
+    elif family == "yes" and any(x in subj for x in ["today","tomorrow","practice","game","pickup","dropoff","payment","due","required","meeting","conference"]):
+        createtask, alert = "yes", "yes"
+    elif family == "yes" and any(x in subj for x in ["newsletter","booster","fundraiser","update"]):
+        createtask, alert, draft = "no", "no", "no"
+    elif any(x in subj for x in ["out for delivery","shipment","tracking","delivered"]):
+        priority, createtask, alert, draft = "info", "no", "no", "no"
+    elif not is_promo and any(x in subj for x in ["urgent","asap","problem","issue","warning","security alert","today"]):
+        priority, createtask, alert = "urgent", "yes", "yes"
+
+if not is_promo and any(sig in subj for sig in response_required_signals):
+    draft = "maybe"
+
+if priority == "family" and draft != "no":
+    draft = "maybe"
+elif priority == "urgent" and email_l not in ["no-reply@accounts.google.com","delegation-noreply@google.com"]:
+    draft = "maybe"
+
+text = f"""ID: {msg_id}
+From: {sender}
+SenderEmail: {email}
+Subject: {subject}
+Date: {date}
+Labels: {labels}
+Mailbox: {mailbox}
+MailboxType: {mailbox_type}
+AccountContext: {account_context}
+Priority: {priority}
+TaskList: {tasklist}
+CreateTask: {createtask}
+CalendarPrompt: {calendarprompt}
+DraftNeeded: {draft}
+AlertNeeded: {alert}
+FamilyVIP: {family}
+BodySummary: {body_summary}
+---
+"""
+pathlib.Path(out).write_text(text)
+print(f"Saved: {out}")
+INNER
+
+cat "$OUT"

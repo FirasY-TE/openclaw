@@ -1,0 +1,289 @@
+#!/usr/bin/env bash
+set -euo pipefail
+GWS="/data/openclaw-gws/bin/gws-rental"
+VIP="/data/openclaw-gws/config/family-vip-senders.txt"
+OUT="/data/openclaw-gws/output/gmail-review-rental-test-latest.txt"
+TMP="$(mktemp)"
+trap 'rm -f "$TMP"' EXIT
+
+MSG_ID="${1:?usage: openclaw-gws-review-test MESSAGE_ID}"
+
+"$GWS" gmail users messages get --params "{\"userId\":\"me\",\"id\":\"$MSG_ID\",\"format\":\"full\"}" > "$TMP"
+
+python3 - <<'INNER' "$TMP" "$VIP" "$OUT" "$MSG_ID"
+import base64, json, sys, re, pathlib
+tmp, vipf, out, msg_id = sys.argv[1:5]
+data = json.load(open(tmp))
+RENTAL_TASKLIST_ID = "clBVU3IyeDFBTXdUSC1jRQ"
+payload = data.get("payload", {}) or {}
+headers = {h.get("name","").lower(): h.get("value","") for h in payload.get("headers",[])}
+sender = headers.get("from","")
+subject = headers.get("subject","")
+date = headers.get("date","")
+m = re.search(r'<([^>]+)>', sender)
+email = m.group(1) if m else sender.strip()
+labels = ", ".join(data.get("labelIds", []))
+
+def _b64url_decode(raw: str) -> str:
+    if not raw:
+        return ""
+    padded = raw + "=" * ((4 - len(raw) % 4) % 4)
+    try:
+        return base64.urlsafe_b64decode(padded).decode("utf-8", errors="replace")
+    except Exception:
+        return ""
+
+def _extract_text(part: dict) -> str:
+    mime = (part.get("mimeType") or "").lower()
+    if mime == "text/plain":
+        return _b64url_decode((part.get("body") or {}).get("data", ""))
+    if mime == "text/html":
+        html = _b64url_decode((part.get("body") or {}).get("data", ""))
+        return re.sub(r"<[^>]+>", " ", html) if html else ""
+    for sub in part.get("parts", []) or []:
+        found = _extract_text(sub)
+        if found:
+            return found
+    return ""
+
+body_raw = _extract_text(payload) or data.get("snippet", "") or ""
+body_trimmed = re.split(
+    r"(?m)^(?:On\s+\w+.*wrote:|-----Original Message-----|From:\s.*Sent:)",
+    body_raw,
+    maxsplit=1,
+)[0]
+# Drop bare URLs — HTML-only newsletters otherwise produce pure tracker soup.
+body_nourl = re.sub(r"https?://\S+", "", body_trimmed)
+body_clean = re.sub(r"\s+", " ", body_nourl).strip()
+BODY_MAX = 350
+body_summary = body_clean[:BODY_MAX] + ("…" if len(body_clean) > BODY_MAX else "")
+
+vips = []
+p = pathlib.Path(vipf)
+if p.exists():
+    vips = [x.strip().lower() for x in p.read_text().splitlines() if x.strip() and not x.strip().startswith("#")]
+
+family = "no"
+for item in vips:
+    if item.startswith("@") and email.lower().endswith(item):
+        family = "yes"
+    elif email.lower() == item:
+        family = "yes"
+
+priority = "info"
+tasklist = "none"
+createtask = "no"
+draft = "no"
+alert = "no"
+
+mailbox = "rentals"
+mailbox_type = "primary"
+account_context = "rental"
+category = "uncategorized"
+
+if family == "yes":
+    priority = "family"
+    tasklist = RENTAL_TASKLIST_ID
+
+subj = subject.lower()
+sender_l = email.lower()
+labels_l = labels.lower()
+is_promo = "category_promotions" in labels_l or "category_social" in labels_l
+response_required_signals = [
+    "response required",
+    "please reply",
+    "let me know",
+    "please advise",
+]
+
+# --- Category detection signals ---
+maintenance_subject_signals = [
+    "yale", "hvac", "lock", "repair", "plumbing", "batteries",
+    "thermostat", "wifi", "smart lock", "water heater", "a/c",
+    "appliance", "leak", "flood", "broken", "clogged", "electrical",
+]
+maintenance_sender_signals = [
+    "yalehomeus.com",
+]
+
+guest_subject_signals = [
+    "guest", "reservation", "check-in", "check-out", "checkout",
+    "door code", "your stay", "guest stay", "review", "arrival",
+    "departure", "cleaning", "hospitable", "booking", "cancellation",
+]
+guest_sender_signals = [
+    "hospitable.com",
+]
+
+# Avoid bare "payment" — it matches every payment confirmation. Use phrases that imply follow-up work.
+financial_subject_signals = [
+    "refund", "damage", "paypal", "stripe", "airbnb payout",
+    "vrbo payout", "tax", "insurance premium", "invoice", "statement",
+    "payout", "deposit", "payment due", "payment reminder",
+    "outstanding balance", "amount due", "balance due", "past due",
+    "late payment", "payment failed", "payment declined",
+]
+financial_sender_signals = [
+    "ashley@ciainsuretexas.com",
+    "twia.org",
+    "weareflood.com",
+    "salestaxonline.com",
+    "gexaemail.com",
+    "notify.newrezservicing.com",
+    "eml.newrez.com",
+]
+
+# Broad rental signals for mailbox_type detection
+rental_signals = [
+    "hospitable.com", "airbnb", "vrbo", "guest", "reservation",
+    "check-in", "checkout", "cleaning", "arrival", "departure",
+    "task tomorrow", "private pool", "beach",
+]
+rental_property_signals = [
+    "118 e. hibiscus", "123 e aries", "south padre island", "78597",
+    "aries breeze", "beach walk", "yale lock", "batteries", "smart lock",
+]
+
+# Detect mailbox_type
+if (any(sig in sender_l or sig in subj for sig in rental_signals)
+    or any(sig in sender_l for sig in maintenance_sender_signals + guest_sender_signals + financial_sender_signals)
+    or any(sig in subj for sig in rental_property_signals)):
+    mailbox_type = "property-related"
+
+# Determine category (first-match priority: maintenance > guest > financial)
+if (any(sig in subj for sig in maintenance_subject_signals)
+    or any(sender_l.endswith("@" + sig) or sender_l.endswith(sig) for sig in maintenance_sender_signals)):
+    category = "maintenance"
+elif (any(sig in subj for sig in guest_subject_signals)
+      or any(sender_l.endswith("@" + sig) or sender_l.endswith(sig) for sig in guest_sender_signals)):
+    category = "guest"
+elif (any(sig in subj for sig in financial_subject_signals)
+      or any(sender_l.endswith("@" + sig) or sender_l == sig for sig in financial_sender_signals)):
+    category = "financial"
+
+transaction_domains = [
+    "venmo.com", "paypal.com", "apple.com", "fedex.com", "ups.com",
+    "usps.com", "amazon.com", "chase.com", "wellsfargo.com",
+]
+
+# --- Priority / task / alert escalation ---
+urgent_maintenance_signals = [
+    "batteries", "repair", "urgent", "leak", "flood", "broken",
+    "emergency", "clogged", "electrical",
+]
+urgent_guest_signals = [
+    "guest complaint", "reservation today", "urgent",
+    "emergency", "problem", "issue",
+]
+financial_doc_signals = ["invoice", "receipt", "payment", "statement", "bill", "balance"]
+
+# Informational payment confirmations / receipts — no task (runs before financial task creation)
+def is_payment_confirmation_email(subj_l: str) -> bool:
+    if any(
+        x in subj_l
+        for x in (
+            "payment due",
+            "payment is due",
+            "payment required",
+            "payment failed",
+            "payment declined",
+            "past due",
+            "amount due",
+            "outstanding",
+        )
+    ):
+        return False
+    confirm_phrases = (
+        "thank you for your payment",
+        "thanks for your payment",
+        "payment received",
+        "payment confirmation",
+        "your payment was",
+        "we received your payment",
+        "we've received your payment",
+        "payment successful",
+        "receipt for your payment",
+        "receipt for payment",
+        "payment has been processed",
+        "your payment of",
+        "auto-pay",
+        "automatic payment",
+        "automatic payment confirmation",
+        "payment thank you",
+        "you paid",
+        "payment applied",
+        "card ending",
+        "thank you — your payment",
+        "thank you - your payment",
+    )
+    return any(p in subj_l for p in confirm_phrases)
+
+if sender_l == "delegation-noreply@google.com" and "granted you access" in subj:
+    priority, tasklist, createtask, alert = "urgent", RENTAL_TASKLIST_ID, "yes", "yes"
+elif sender_l == "no-reply@accounts.google.com" and "security alert" in subj:
+    priority, tasklist, createtask, alert = "urgent", RENTAL_TASKLIST_ID, "yes", "yes"
+elif any(sender_l.endswith("@" + d) or sender_l.endswith(d) for d in transaction_domains):
+    priority, createtask, alert, draft = "info", "no", "no", "no"
+elif family == "yes" and any(x in subj for x in ["today","tomorrow","practice","game","pickup","dropoff","payment","due","required","meeting","conference"]):
+    createtask, alert = "yes", "yes"
+elif family == "yes" and any(x in subj for x in ["newsletter","booster","fundraiser","update"]):
+    createtask, alert, draft = "no", "no", "no"
+elif any(x in subj for x in ["out for delivery","shipment","tracking","delivered"]):
+    priority, createtask, alert, draft = "info", "no", "no", "no"
+elif is_promo:
+    priority, createtask, alert, draft = "info", "no", "no", "no"
+# Rental category-aware escalation (invoices/receipts from maintenance vendors stay low priority)
+elif category == "maintenance" and any(sig in subj for sig in financial_doc_signals):
+    priority, tasklist, createtask = "low", RENTAL_TASKLIST_ID, "yes"
+elif category == "maintenance" and any(sig in subj for sig in urgent_maintenance_signals):
+    priority, tasklist, createtask, alert = "urgent", RENTAL_TASKLIST_ID, "yes", "yes"
+elif category == "maintenance":
+    priority, tasklist, createtask, alert = "info", "none", "no", "no"
+elif category == "guest" and any(sig in subj for sig in urgent_guest_signals):
+    priority, tasklist, createtask, alert = "urgent", RENTAL_TASKLIST_ID, "yes", "yes"
+elif category == "guest":
+    priority, tasklist, createtask = "medium", RENTAL_TASKLIST_ID, "yes"
+elif category == "financial" and is_payment_confirmation_email(subj):
+    priority, tasklist, createtask, alert = "info", "none", "no", "no"
+elif category == "financial":
+    priority, tasklist, createtask = "low", RENTAL_TASKLIST_ID, "yes"
+elif not is_promo and any(x in subj for x in ["urgent","asap","problem","issue","warning","security alert","today"]):
+    priority, createtask, alert = "urgent", "yes", "yes"
+    tasklist = RENTAL_TASKLIST_ID
+
+# Catch-all: payment confirmations must not create tasks (any category / edge path)
+if is_payment_confirmation_email(subj) and createtask == "yes":
+    priority, tasklist, createtask, alert = "info", "none", "no", "no"
+
+if not is_promo and any(sig in subj for sig in response_required_signals):
+    draft = "maybe"
+
+if priority == "family" and draft != "no":
+    draft = "maybe"
+elif priority == "urgent" and sender_l not in ["no-reply@accounts.google.com","delegation-noreply@google.com"]:
+    draft = "maybe"
+
+text = f"""ID: {msg_id}
+From: {sender}
+SenderEmail: {email}
+Subject: {subject}
+Date: {date}
+Labels: {labels}
+Mailbox: {mailbox}
+MailboxType: {mailbox_type}
+AccountContext: {account_context}
+Category: {category}
+Priority: {priority}
+TaskList: {tasklist}
+CreateTask: {createtask}
+DraftNeeded: {draft}
+AlertNeeded: {alert}
+FamilyVIP: {family}
+BodySummary: {body_summary}
+---
+"""
+pathlib.Path(out).write_text(text)
+print(f"Saved: {out}")
+INNER
+
+cat "$OUT"
