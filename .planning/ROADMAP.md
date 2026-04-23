@@ -64,7 +64,7 @@ Plans:
 - [ ] "Draft response" button triggers reply generation for an email item
 - [ ] Approval/edit/send flow works end-to-end for email reply
 
-**Plans:** 3 plans
+**Plans:** 1/2 plans executed
 Plans:
 
 - [x] `02-01-PLAN.md` — Triage digest bin script, pytest fixtures, architecture doc update
@@ -101,6 +101,47 @@ Plans:
 - [ ] `/bash tdr send-now <token>` actually sends email (has `To:` header)
 - [ ] Rule-based classifier escalates "Response Required" subjects into needs-reply
 - [ ] Container has no `OPENCLAW_TRIAGE_DRAFT_*` env vars, no `openclaw-gws-triage-draft-agent` script, no patched core tarball
+
+**Plans:** 2 plans
+
+Plans:
+
+- [ ] `02-1-01-PLAN.md` — Remove triage auto-router/callback stack and preserve digest + `tdr` finalization baseline
+- [ ] `02-1-02-PLAN.md` — Add classifier/token/runbook simplification layer and patched-core retirement checks
+
+---
+
+### Phase 02.2: Version Alignment + Upgrade Stabilization (Local + VPS + Mac GUI)
+
+**Goal:** Align OpenClaw versions across local CLI/runtime, VPS runtime, and Mac GUI app after the 02.1 simplification rollout, with explicit health gates and rollback checkpoints.
+
+**Why:** Keeping architecture cleanup and version upgrades as separate phases reduces debugging ambiguity and gives cleaner rollback boundaries if any regression appears.
+
+**Requirements:**
+
+- Upgrade local OpenClaw CLI/runtime to the target release and verify probes.
+- Upgrade VPS OpenClaw runtime via `openclaw-ops` source-of-truth deploy flow (no ad-hoc VPS edits).
+- Upgrade OpenClaw Mac GUI app to the same target version family and restart gateway through normal app flow.
+- Capture pre/post version snapshots across local, VPS, and Mac surfaces.
+- Run post-upgrade triage smoke and Phase 02.1 critical-path checks.
+- Document rollback checkpoints and exact revert path for version-only rollback.
+
+**Success criteria:**
+
+- Local CLI/runtime, VPS runtime, and Mac GUI are on the intended target version family.
+- `openclaw channels status --probe` passes on local and VPS after upgrade.
+- Triage flow from topic conversation + token finalization still works end-to-end.
+- No reintroduction of 02.1 retired artifacts (`OPENCLAW_TRIAGE_DRAFT_*`, draft-agent script, patched-core path).
+
+**UAT:**
+
+- [ ] Local `openclaw --version` matches planned target.
+- [ ] VPS `docker exec openclaw-ridl-openclaw-1 openclaw --version` matches planned target.
+- [ ] Mac GUI reports/operates on matching target version family and gateway restarts cleanly.
+- [ ] Local + VPS `openclaw channels status --probe` succeed post-upgrade.
+- [ ] Manual triage run produces digest with inline tokens and no callback buttons.
+- [ ] `/bash tdr send-now <token>` still sends correctly for a test item.
+- [ ] Runtime checks show no `OPENCLAW_TRIAGE_DRAFT_*` vars and no `openclaw-gws-triage-draft-agent` binary.
 
 **Plans:** TBD (run `/gsd-plan-phase` against this phase)
 
@@ -210,10 +251,11 @@ Plans:
 | 1     | Completed        | Foundation — topic routing live                           |
 | 2     | Partial          | Plans 02-01 and 02-02 completed; 02-03 superseded by 02.1 |
 | 02.1  | Context captured | Plan C pivot — simplify triage draft surface              |
+| 02.2  | Not started      | Version alignment across local, VPS, and Mac GUI          |
 | 3     | Not started      | Prior Beeper design work available                        |
 | 4     | Not started      | API investigation needed early                            |
 | 5     | Not started      | After Phases 2-4 stabilize                                |
 
 ---
 
-_Last updated: 2026-04-13_
+_Last updated: 2026-04-22_
