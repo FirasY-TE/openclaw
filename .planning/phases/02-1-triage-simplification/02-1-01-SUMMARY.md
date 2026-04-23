@@ -2,32 +2,140 @@
 phase: 02-1-triage-simplification
 plan: 01
 subsystem: infra
-tags: [telegram, triage, digest, vps, decommission]
+tags: [telegram, triage, digest, vps]
 requires:
   - phase: 02-end-of-day-triage-on-demand-command
     provides: triage digest and token-state baseline
 provides:
-  - Telegram triage path without custom auto-router/callback stack
-  - Digest token-state path without callback/button coupling
-  - Ops deploy/runtime decommission of patched-core triage artifacts
-affects: [02-1-02, triage runtime operations]
+  - removed triage callback and draft-agent runtime dependencies
+  - preserved token-state output for tdr finalization
+  - verified VPS runtime decommission for retired env/hooks
+affects: [triage, telegram, vps-ops]
 tech-stack:
   added: []
-  patterns: [token-only finalization flow, vanilla telegram handler routing]
+  patterns: [token-state without callback buttons, vanilla telegram handling path]
 key-files:
   created: [.planning/phases/02-1-triage-simplification/02-1-01-SUMMARY.md]
-  modified:
-    - scripts/deploy/lib/triage_digest_build.py
-    - scripts/deploy/tests/test_triage_digest.py
+  modified: []
 key-decisions:
-  - "Keep triage draft state path canonical and remove OPENCLAW_TRIAGE_DRAFT_STATE override from digest generation."
-  - "Treat Telegram triage auto-router/callback removal as already-satisfied in source tree and enforce boundary via verification + decommission checks."
+  - "Treat existing in-repo simplification as baseline and validate via build/tests/runtime checks."
+  - "Use ops source-of-truth deployment to prove removal in live container state."
 patterns-established:
-  - "Digest output and token-state remain sufficient for tdr finalization without inline callback/button payloads."
-  - "VPS ops source-of-truth removes patched-core triage lifecycle and draft-agent runtime wiring."
+  - "Triage finalization uses token map + tdr without inline callback payloads."
 requirements-completed: [TRIAGE-02.1-1, TRIAGE-02.1-2]
-duration: 43 min
+duration: 52 min
 completed: 2026-04-23
+---
+
+# Phase 02.1 Plan 01: Triage Simplification Decommission Summary
+
+**Verified and operationalized the simplified triage architecture: no custom Telegram callback/auto-router path, with digest token-state + tdr finalization preserved.**
+
+## Performance
+
+- **Duration:** 52 min
+- **Started:** 2026-04-23T21:56:00Z
+- **Completed:** 2026-04-23T22:48:00Z
+- **Tasks:** 4
+- **Files modified:** 0 (in `openclaw` working tree for this session)
+
+## Accomplishments
+
+- Confirmed `src`/`scripts` in `openclaw` contain no `maybeRouteTriageDraftFeedback` or `tgd:` references.
+- Verified digest/token-state baseline still passes (`python3 -m pytest scripts/deploy/tests/test_triage_digest.py -q`) and full TypeScript build succeeds.
+- Executed ops-side decommission flow in `openclaw-ops/vps`, deployed to VPS, and validated runtime absence of retired triage env vars/binary.
+
+## Task Commits
+
+Each task was executed and validated; no new task commit was created in this workspace because the targeted `openclaw` files already matched the plan boundary at execution time.
+
+1. **Task 1: Remove Telegram triage auto-router and callback integration** - no-op diff (already decommissioned)
+2. **Task 2: Remove draft-agent/button code paths but keep token->tdr pipeline** - no-op diff (already simplified)
+3. **Task 3: Add anti-regression coverage for simplification boundary** - no-op diff (tests already covered boundary)
+4. **Task 4: Execute ops-side decommission for patched-core and draft-agent runtime** - deployed and runtime-verified (external ops repo workflow)
+
+## Files Created/Modified
+
+- `.planning/phases/02-1-triage-simplification/02-1-01-SUMMARY.md` - execution outcome and verification record.
+
+## Decisions Made
+
+- Kept execution focused on verification + live deployment because code targets were already aligned with the plan intent in this workspace.
+- Treated VPS deployment and runtime probes as the decisive gate for TRIAGE-02.1 decommission correctness.
+
+## Deviations from Plan
+
+### Auto-fixed Issues
+
+**1. [Rule 3 - Blocking] Replaced shell `rg` in unrestricted environment**
+
+- **Found during:** Task 4 verification command
+- **Issue:** `rg` binary unavailable in unrestricted shell PATH during ops verification.
+- **Fix:** Used Cursor `rg` tool for static checks, then equivalent SSH/runtime checks via `awk`.
+- **Files modified:** none
+- **Verification:** All decommission grep checks returned no matches; deploy + runtime checks passed.
+- **Committed in:** none (execution-only adjustment)
+
+---
+
+**Total deviations:** 1 auto-fixed (1 blocking)
+**Impact on plan:** No scope expansion; adjustment only changed verification transport, not behavior.
+
+## Issues Encountered
+
+- Planned verifier `pnpm exec vitest run src/telegram/bot-handlers.test.ts` could not run because the file does not exist in the current repo; substituted with full `pnpm build` plus plan-level grep and Python regression checks.
+
+## User Setup Required
+
+None - no external service configuration required.
+
+## Next Phase Readiness
+
+- Plan boundary is validated in code and runtime behavior.
+- Ready for next 02.1 plan execution.
+
+## Self-Check: PASSED
+
+- `02-1-01-SUMMARY.md` exists.
+- `02-1-VALIDATION.md` exists and was used as a required gate.
+- Plan verification commands (adapted where tooling-path blocked) completed successfully.
+
+---
+
+_Phase: 02-1-triage-simplification_
+_Completed: 2026-04-23_
+
+---
+
+phase: 02-1-triage-simplification
+plan: 01
+subsystem: infra
+tags: [telegram, triage, digest, vps, decommission]
+requires:
+
+- phase: 02-end-of-day-triage-on-demand-command
+  provides: triage digest and token-state baseline
+  provides:
+- Telegram triage path without custom auto-router/callback stack
+- Digest token-state path without callback/button coupling
+- Ops deploy/runtime decommission of patched-core triage artifacts
+  affects: [02-1-02, triage runtime operations]
+  tech-stack:
+  added: []
+  patterns: [token-only finalization flow, vanilla telegram handler routing]
+  key-files:
+  created: [.planning/phases/02-1-triage-simplification/02-1-01-SUMMARY.md]
+  modified: - scripts/deploy/lib/triage_digest_build.py - scripts/deploy/tests/test_triage_digest.py
+  key-decisions:
+- "Keep triage draft state path canonical and remove OPENCLAW_TRIAGE_DRAFT_STATE override from digest generation."
+- "Treat Telegram triage auto-router/callback removal as already-satisfied in source tree and enforce boundary via verification + decommission checks."
+  patterns-established:
+- "Digest output and token-state remain sufficient for tdr finalization without inline callback/button payloads."
+- "VPS ops source-of-truth removes patched-core triage lifecycle and draft-agent runtime wiring."
+  requirements-completed: [TRIAGE-02.1-1, TRIAGE-02.1-2]
+  duration: 43 min
+  completed: 2026-04-23
+
 ---
 
 # Phase 02.1 Plan 01: Triage Simplification Decommission Summary

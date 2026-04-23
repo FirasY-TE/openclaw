@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 02.1.1-01-PLAN.md (Hospitable dict-leak fix + VPS deploy)
-last_updated: "2026-04-23T05:01:09.788Z"
+status: verifying
+stopped_at: Completed 02.1-01-PLAN.md
+last_updated: "2026-04-23T05:01:35.868Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 8
@@ -27,7 +27,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-08)
 
 Phase: 02.1.1 (Triage Digest Context & Rendering Fixes) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-23
 
 Progress: [████████░░] 78%
@@ -47,6 +47,7 @@ Progress: [████████░░] 78%
 - **[Phase 02.1.1, 2026-04-23]:** Two live-UAT gaps identified after 02.1 completed: (1) Hospitable digest lines render raw Python dict repr because `sender` is a dict and `str(sender)` was used; (2) main agent has no email body context when asked to draft in-thread because digest only includes BodySummary. Decision: Option A — inline full email body as Markdown blockquote in digest for `needs_reply` items. Rejected Option B (`tdr show` subcommand) because it reintroduces soft-dependency failure class 02.1 was meant to remove.
 - **[Phase 02.1.1 process lesson]:** Every plan now explicitly mirrors `openclaw/scripts/deploy/**` changes to `openclaw-ops/vps/scripts/**` and verifies live VPS deploy before completing. This closes the process gap from 02.1-02 where the ops mirror was missed and the classifier fix didn't go live.
 - [Phase 02.1.1]: Hospitable digest: resolve dict sender via full_name→first_name→name helper chain; preview prefers body→preview→text; string-only coercion prevents Python dict repr leak in Telegram digest.
+- [Phase 02.1]: Validated triage simplification boundary using build/tests plus VPS runtime decommission checks.
 
 ### Blockers/Concerns
 
@@ -56,8 +57,8 @@ Progress: [████████░░] 78%
 
 ## Session Continuity
 
-**Last session:** 2026-04-23T05:00:42.464Z
-**Last Date:** 2026-04-23T05:00:42.464Z
-**Stopped At:** Completed 02.1.1-01-PLAN.md (Hospitable dict-leak fix + VPS deploy)
+**Last session:** 2026-04-23T05:01:35.861Z
+**Last Date:** 2026-04-23T05:01:35.861Z
+**Stopped At:** Completed 02.1-01-PLAN.md
 **Resume File:** None
 **Resume hint:** next session, run `/gsd-execute-phase 02.1.1` (or say "start phase 02.1.1")
