@@ -95,20 +95,28 @@ Container User Model:
    - consumed by: morning brief (health source + topAlerts if degraded)
    - reauth runbook: docs/commands.txt (TOKEN REFRESH RUNBOOK section)
 
-9. End-of-Day Triage Digest Agent ✅ OPERATIONAL (Phase 2)
+9. End-of-Day Triage Digest Agent ✅ OPERATIONAL (Phase 2, refined 02.1.1)
    - script: /data/openclaw-gws/bin/openclaw-gws-triage-digest
    - library: scripts/deploy/lib/triage_digest_build.py (also in-repo under scripts/deploy/lib/)
    - inputs (under /data/openclaw-gws/output/):
-       gmail-review-summary-latest.txt (personal)
-       gmail-review-rental-summary-latest.txt (rental)
+       gmail-review-summary-latest.txt (personal, carries BodyB64 per item as of 02.1.1-02)
+       gmail-review-rental-summary-latest.txt (rental, carries BodyB64 per item as of 02.1.1-02)
        hospitable-events-latest.json
    - outputs:
       triage-digest-latest.md, triage-digest-latest.json
    - window: America/Chicago calendar day from local midnight through run time
    - delivery: logical route `triage_digest` via send_with_topic_fallback (topic primary, DM fallback)
+   - digest shape (per needs_reply Gmail item, as of 02.1.1-02):
+       summary bullet + inline token + finalize hint + blank line + Markdown blockquote of full email body
+         (each line prefixed with `> `, capped at 4000 chars with a trailing `... (truncated)` marker)
+       — main agent drafts from that inline body; never fetches externally, never asks operator to paste
+   - digest shape (top of `## Needs attention` section, as of 02.1.1-02):
+       single italic header-line `_Reply in this topic with "draft <name>", "ignore <name>", or "summary" ..._`
+         — operator discoverability only; rendered as plain markdown text, never a callback/button,
+           emitted once per digest, only when `## Needs attention` is non-empty
    - Gmail needs-reply rows: inline token in digest text; finalize with `/bash tdr save <token>` or `/bash tdr send-now <token>`
    - state map: /data/openclaw-gws/state/triage-draft-tokens.json
-   - operator behavior tuning runbook: scripts/deploy/prompts/triage-draft-runbook.md
+   - operator behavior tuning runbook: scripts/deploy/prompts/triage-draft-runbook.md (canonical spec for draft / ignore / summary verbs)
    - reply helper: /data/openclaw-gws/bin/openclaw-gws-triage-reply (draft | replace | send | send-now + token)
    - on-demand: openclaw triage (gateway) and Telegram /triage (authorized operator)
    - scheduled: host cron 4:30 PM America/Chicago — see docs/cron-jobs.txt
