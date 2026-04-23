@@ -147,7 +147,7 @@ Plans:
 Plans:
 
 - [x] `02-1-1-01-PLAN.md` — Fix Hospitable dict-leak in digest; mirror to openclaw-ops and deploy
-- [ ] `02-1-1-02-PLAN.md` — Inline full email body as blockquote for needs_reply items; update runbook; mirror to openclaw-ops and deploy
+- [x] `02-1-1-02-PLAN.md` — Inline full email body as blockquote for needs_reply items; update runbook; mirror to openclaw-ops and deploy
 
 ---
 
@@ -286,17 +286,17 @@ Plans:
 
 ## Status
 
-| Phase  | Status                                 | Notes                                                                         |
-| ------ | -------------------------------------- | ----------------------------------------------------------------------------- |
-| 1      | Completed                              | Foundation — topic routing live                                               |
-| 2      | Partial                                | Plans 02-01 and 02-02 completed; 02-03 superseded by 02.1                     |
-| 02.1   | Implementation done; UAT surfaced gaps | Plan C pivot — simplify triage draft surface; live UAT blocked by 02.1.1 gaps |
-| 02.1.1 | Executing                              | Plan 01 complete (dict-leak fix shipped + verified live); Plan 02 pending     |
-| 02.2   | Not started                            | Version alignment across local, VPS, and Mac GUI                              |
-| 3      | Not started                            | Prior Beeper design work available                                            |
-| 4      | Not started                            | API investigation needed early                                                |
-| 5      | Not started                            | After Phases 2-4 stabilize                                                    |
+| Phase  | Status                                 | Notes                                                                                 |
+| ------ | -------------------------------------- | ------------------------------------------------------------------------------------- |
+| 1      | Completed                              | Foundation — topic routing live                                                       |
+| 2      | Partial                                | Plans 02-01 and 02-02 completed; 02-03 superseded by 02.1                             |
+| 02.1   | Implementation done; UAT surfaced gaps | Plan C pivot — simplify triage draft surface; live UAT blocked by 02.1.1 gaps         |
+| 02.1.1 | Complete                               | Plan 01 (dict-leak fix) + Plan 02 (inline body + header-line) shipped + verified live |
+| 02.2   | Not started                            | Version alignment across local, VPS, and Mac GUI                                      |
+| 3      | Not started                            | Prior Beeper design work available                                                    |
+| 4      | Not started                            | API investigation needed early                                                        |
+| 5      | Not started                            | After Phases 2-4 stabilize                                                            |
 
 ---
 
-_Last updated: 2026-04-23 (02.1.1-01 complete)_
+_Last updated: 2026-04-23 (02.1.1 complete — both plans shipped)_

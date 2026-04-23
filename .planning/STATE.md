@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 02.1-01-PLAN.md
-last_updated: "2026-04-23T05:01:35.868Z"
+stopped_at: Completed 02-1-1-02-PLAN.md
+last_updated: "2026-04-23T05:15:25.431Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 8
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
   percent: 78
 ---
 
@@ -48,6 +48,9 @@ Progress: [████████░░] 78%
 - **[Phase 02.1.1 process lesson]:** Every plan now explicitly mirrors `openclaw/scripts/deploy/**` changes to `openclaw-ops/vps/scripts/**` and verifies live VPS deploy before completing. This closes the process gap from 02.1-02 where the ops mirror was missed and the classifier fix didn't go live.
 - [Phase 02.1.1]: Hospitable digest: resolve dict sender via full_name→first_name→name helper chain; preview prefers body→preview→text; string-only coercion prevents Python dict repr leak in Telegram digest.
 - [Phase 02.1]: Validated triage simplification boundary using build/tests plus VPS runtime decommission checks.
+- [Phase 02-1-1-triage-digest-context-fixes]: Option A over Option B: extended review scripts to emit BodyB64 rather than adding a new bodies-snapshot file
+- [Phase 02-1-1-triage-digest-context-fixes]: Single-line base64 transport for body keeps summary parser untouched and handles any email content safely
+- [Phase 02-1-1-triage-digest-context-fixes]: Blockquote cap is 4000 body chars with '... (truncated)' marker; header-line affordance sits at top of '## Needs attention' when non-empty
 
 ### Blockers/Concerns
 
@@ -57,8 +60,8 @@ Progress: [████████░░] 78%
 
 ## Session Continuity
 
-**Last session:** 2026-04-23T05:01:35.861Z
-**Last Date:** 2026-04-23T05:01:35.861Z
-**Stopped At:** Completed 02.1-01-PLAN.md
+**Last session:** 2026-04-23T05:15:13.731Z
+**Last Date:** 2026-04-23T05:15:13.731Z
+**Stopped At:** Completed 02-1-1-02-PLAN.md
 **Resume File:** None
 **Resume hint:** next session, run `/gsd-execute-phase 02.1.1` (or say "start phase 02.1.1")
