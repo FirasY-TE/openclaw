@@ -238,6 +238,120 @@ class TestTriageDigest(unittest.TestCase):
             self.assertNotIn("first_name", md)
             self.assertNotIn("picture_url", md)
 
+    def test_needs_reply_fixture_renders_full_body_blockquote_under_token_lines(self) -> None:
+        """Fixture has DraftNeeded: maybe (needs_reply) + BodyB64 set → the
+        rendered digest must contain a `> `-prefixed blockquote of the full
+        body, emitted AFTER the item's summary + token + finalize hint."""
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            out = tmp / "output"
+            out.mkdir()
+            shutil.copy(FIXTURES / "personal-summary-fragment.txt", out / "gmail-review-summary-latest.txt")
+
+            now = tdb._parse_now_iso("2026-04-13T20:00:00-05:00")
+            meta, md, by_token = tdb.run_build(tmp, now=now)
+
+            # Body decoded onto the needs_reply item.
+            meta2, items = tdb.build_items(tmp, now=now)
+            needs_reply = [it for it in items if it.get("category") == "needs_reply"]
+            self.assertTrue(needs_reply, "fixture should surface a needs_reply item")
+            self.assertIn("fullBody", needs_reply[0])
+            self.assertIn("invoice", needs_reply[0]["fullBody"].lower())
+
+            # Blockquote body lines are present in the digest.
+            self.assertIn("> Hi Bella,", md)
+            self.assertIn("> Following up on the invoice", md)
+            self.assertIn("> Thanks,", md)
+            self.assertIn("> Someone", md)
+
+            # Blockquote sits BELOW the finalize hint for its item, not before.
+            finalize_idx = md.find("_Finalize when ready:")
+            self.assertGreaterEqual(finalize_idx, 0)
+            blockquote_idx = md.find("> Hi Bella,")
+            self.assertGreater(blockquote_idx, finalize_idx)
+
+            # BodySummary line is NOT itself quote-prefixed (only the real body is).
+            self.assertNotIn("> Hi — following up on the invoice", md)
+
+    def test_long_body_truncates_with_marker(self) -> None:
+        """Bodies >FULL_BODY_MAX chars must be clipped (body content, before
+        blockquote prefixes) and carry a trailing `... (truncated)` line so
+        the operator knows the digest clipped."""
+        body = "\n".join(f"line {i:05d} " + ("x" * 80) for i in range(200))
+        self.assertGreater(len(body), tdb.FULL_BODY_MAX)
+        lines = tdb._render_body_blockquote(body)
+        rendered = "\n".join(lines)
+        # Truncation marker is the final line and is blockquote-prefixed.
+        self.assertTrue(rendered.endswith("> " + tdb.FULL_BODY_TRUNCATED_MARKER))
+        # Body content (sum of stripped `> ` prefixes, minus the marker line)
+        # must not exceed FULL_BODY_MAX — this is the contract the Telegram
+        # 4096-char safety budget is built on.
+        body_chars = sum(len(ln) - 2 for ln in lines[:-1])  # strip "> "
+        self.assertLessEqual(body_chars, tdb.FULL_BODY_MAX)
+        # Every rendered line must be blockquote-prefixed.
+        for ln in lines:
+            self.assertTrue(ln.startswith("> "), ln)
+
+    def test_short_body_blockquote_has_no_truncation_marker(self) -> None:
+        lines = tdb._render_body_blockquote("Hi there.\nJust a note.")
+        self.assertEqual(lines, ["> Hi there.", "> Just a note."])
+        self.assertNotIn(tdb.FULL_BODY_TRUNCATED_MARKER, "\n".join(lines))
+
+    def test_header_line_affordance_present_once_when_needs_attention_has_items(self) -> None:
+        """Use both personal (needs_reply) + rental (needs_attention) fixtures
+        so the digest has a populated `## Needs attention` section and emits
+        the single italic header-line once."""
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            out = tmp / "output"
+            out.mkdir()
+            shutil.copy(FIXTURES / "personal-summary-fragment.txt", out / "gmail-review-summary-latest.txt")
+            shutil.copy(FIXTURES / "rental-summary-fragment.txt", out / "gmail-review-rental-summary-latest.txt")
+
+            now = tdb._parse_now_iso("2026-04-13T20:00:00-05:00")
+            _, md, _ = tdb.run_build(tmp, now=now)
+
+            self.assertEqual(md.count("Reply in this topic with"), 1)
+            self.assertIn("## Needs attention", md)
+            needs_attention_idx = md.find("## Needs attention")
+            affordance_idx = md.find("Reply in this topic with")
+            self.assertGreater(affordance_idx, needs_attention_idx)
+            # Affordance lists all three recognized verbs.
+            affordance_line = md[affordance_idx : affordance_idx + 300]
+            self.assertIn('"draft <name>"', affordance_line)
+            self.assertIn('"ignore <name>"', affordance_line)
+            self.assertIn('"summary"', affordance_line)
+
+    def test_header_line_affordance_absent_when_needs_attention_empty(self) -> None:
+        """Only the personal fixture is loaded → it produces a needs_reply
+        item but no needs_attention items; the header-line must be absent."""
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            out = tmp / "output"
+            out.mkdir()
+            shutil.copy(FIXTURES / "personal-summary-fragment.txt", out / "gmail-review-summary-latest.txt")
+
+            now = tdb._parse_now_iso("2026-04-13T20:00:00-05:00")
+            _, md, _ = tdb.run_build(tmp, now=now)
+
+            self.assertNotIn("## Needs attention", md)
+            self.assertNotIn("Reply in this topic with", md)
+
+    def test_inline_body_render_has_no_callback_payloads(self) -> None:
+        """Regression: adding inline body + header-line must NOT reintroduce
+        callback/button payloads (the `tgd:*` class killed by Plan C)."""
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            out = tmp / "output"
+            out.mkdir()
+            shutil.copy(FIXTURES / "personal-summary-fragment.txt", out / "gmail-review-summary-latest.txt")
+            shutil.copy(FIXTURES / "rental-summary-fragment.txt", out / "gmail-review-rental-summary-latest.txt")
+
+            now = tdb._parse_now_iso("2026-04-13T20:00:00-05:00")
+            _, md, _ = tdb.run_build(tmp, now=now)
+            self.assertNotIn("tgd" + ":", md)
+            self.assertNotIn("callback_data", md)
+
     def test_needs_reply_bucket_still_renders_after_callback_removal(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             tmp = Path(td)

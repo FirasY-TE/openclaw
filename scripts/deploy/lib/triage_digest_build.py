@@ -25,6 +25,16 @@ from zoneinfo import ZoneInfo
 TZ = ZoneInfo("America/Chicago")
 CAP_PER_CATEGORY = 15
 LOOKBACK_HOURS = 24
+# Inline-body blockquote cap: keeps a single digest message under Telegram's
+# 4096-char payload limit even when several needs_reply items land together.
+FULL_BODY_MAX = 4000
+FULL_BODY_TRUNCATED_MARKER = "... (truncated)"
+# Single discoverability line at the top of the Needs-attention section.
+# Spec: `.planning/phases/02-1-1-triage-digest-context-fixes/02-1-1-02-PLAN.md`.
+NEEDS_ATTENTION_AFFORDANCE = (
+    '_Reply in this topic with **"draft <name>"**, **"ignore <name>"**, '
+    'or **"summary"** — I have each email body inline below._'
+)
 
 
 def _now_chicago() -> datetime:
@@ -406,6 +416,10 @@ def render_markdown(meta: dict[str, Any], items: list[dict[str, Any]]) -> str:
         if not bucket:
             continue
         out.append(f"## {titles[cat]}")
+        # Single italic header-line affordance at the top of `## Needs attention`
+        # (operator discoverability; spec in 02-1-1-02-PLAN.md Task 2).
+        if cat == "needs_attention":
+            out.append(NEEDS_ATTENTION_AFFORDANCE)
         total = len(bucket)
         shown = bucket[:CAP_PER_CATEGORY]
         hidden = total - len(shown)
@@ -438,11 +452,43 @@ def render_markdown(meta: dict[str, Any], items: list[dict[str, Any]]) -> str:
                     out.append(
                         "  _Finalize when ready: `/bash tdr send-now <token>` or `/bash tdr save <token>`._"
                     )
+                # Inline full email body as a Markdown blockquote under each
+                # needs_reply Gmail item so the main agent can draft from
+                # thread context alone (no external fetch / paste / tool call).
+                if (
+                    cat == "needs_reply"
+                    and src in ("personal_gmail", "rental_gmail")
+                    and isinstance(it.get("fullBody"), str)
+                    and it["fullBody"].strip()
+                ):
+                    out.append("")
+                    out.extend(_render_body_blockquote(it["fullBody"]))
+                    out.append("")
         if hidden > 0:
             out.append(
                 f"+{hidden} more items omitted (cap {CAP_PER_CATEGORY}); run on-demand `/triage` or `openclaw triage` for full detail."
             )
     return "\n".join(out)
+
+
+def _render_body_blockquote(full_body: str) -> list[str]:
+    """Render `full_body` as a `> `-prefixed Markdown blockquote, capped at
+    `FULL_BODY_MAX` chars. When the body exceeds the cap, the quoted block
+    ends with a trailing `... (truncated)` line so the operator / agent can
+    tell the body was clipped. Returns a list of already-prefixed lines ready
+    to append to the digest output.
+    """
+    body = full_body or ""
+    truncated = False
+    if len(body) > FULL_BODY_MAX:
+        body = body[:FULL_BODY_MAX].rstrip()
+        truncated = True
+    lines = [f"> {ln}" for ln in body.splitlines()]
+    if not lines and body:
+        lines = [f"> {body}"]
+    if truncated:
+        lines.append(f"> {FULL_BODY_TRUNCATED_MARKER}")
+    return lines
 
 
 def _draft_state_path(base_dir: Path) -> Path:
