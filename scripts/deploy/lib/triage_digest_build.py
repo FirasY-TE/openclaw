@@ -155,10 +155,62 @@ def _body_summary_gmail(fields: dict[str, str]) -> str:
     return raw[:BODY_SUMMARY_MAX].rstrip() + "…"
 
 
+def _coerce_str(value: Any) -> str:
+    """Return value if it is a non-empty string; empty string otherwise.
+
+    Defensive helper for Hospitable payloads whose fields can be dicts, None,
+    or numeric — never stringify a dict (prevents Python repr leaks like
+    `{'first_name': ...}` in the digest).
+    """
+    if isinstance(value, str):
+        return value
+    return ""
+
+
+def _hospitable_guest_name(msg: dict[str, Any]) -> str:
+    """Resolve a human-readable guest name from a Hospitable message.
+
+    Prefers top-level string fields, then falls back to the nested `sender`
+    dict (full_name → first_name). Never returns a dict repr.
+    """
+    for key in ("guestName", "guest_name"):
+        val = _coerce_str(msg.get(key))
+        if val:
+            return val
+    sender = msg.get("sender")
+    if isinstance(sender, dict):
+        for key in ("full_name", "fullName", "first_name", "firstName", "name"):
+            val = _coerce_str(sender.get(key))
+            if val:
+                return val
+    else:
+        val = _coerce_str(sender)
+        if val:
+            return val
+    return "guest"
+
+
+def _hospitable_preview(msg: dict[str, Any]) -> str:
+    """Extract a readable preview string from a Hospitable message.
+
+    Prefers the real `body`, then `preview`, then `text`. Only strings are
+    accepted — dicts/other types are skipped so the digest never leaks repr.
+    """
+    for key in ("body", "preview", "text"):
+        val = _coerce_str(msg.get(key))
+        if val:
+            return val[:100]
+    return ""
+
+
 def _summary_line_hospitable(msg: dict[str, Any]) -> str:
-    prev = str(msg.get("preview") or msg.get("body") or msg.get("text") or "")[:100]
-    guest = str(msg.get("guestName") or msg.get("guest_name") or msg.get("sender") or "guest")
-    rid = str(msg.get("reservationId") or msg.get("reservation_id") or "")
+    guest = _hospitable_guest_name(msg)
+    prev = _hospitable_preview(msg)
+    rid = _coerce_str(msg.get("reservationId")) or _coerce_str(msg.get("reservation_id"))
+    if not rid:
+        rid_raw = msg.get("reservationId") or msg.get("reservation_id")
+        if isinstance(rid_raw, (int, float)):
+            rid = str(rid_raw)
     base = f"[Hospitable] {guest}"
     if rid:
         base += f" (res {rid})"
