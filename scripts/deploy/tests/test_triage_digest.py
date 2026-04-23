@@ -141,8 +141,20 @@ class TestTriageDigest(unittest.TestCase):
             self.assertIn("account", token_state)
             self.assertNotIn("lastActive", token_state)
             self.assertNotIn("lastDraftText", token_state)
-            self.assertNotIn("tgd:", md)
+            self.assertNotIn("tgd" + ":", md)
             self.assertNotIn("callback_data", md)
+            for key in (
+                "account",
+                "gmailMessageId",
+                "threadId",
+                "subject",
+                "sender",
+                "date",
+                "summaryLine",
+                "draftTextVersion",
+                "draftId",
+            ):
+                self.assertIn(key, token_state)
 
     def test_needs_reply_bucket_still_renders_after_callback_removal(self) -> None:
         with tempfile.TemporaryDirectory() as td:
