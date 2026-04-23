@@ -353,9 +353,6 @@ def render_markdown(meta: dict[str, Any], items: list[dict[str, Any]]) -> str:
 
 
 def _draft_state_path(base_dir: Path) -> Path:
-    raw = os.environ.get("OPENCLAW_TRIAGE_DRAFT_STATE", "").strip()
-    if raw:
-        return Path(raw)
     return base_dir / "state" / "triage-draft-tokens.json"
 
 
