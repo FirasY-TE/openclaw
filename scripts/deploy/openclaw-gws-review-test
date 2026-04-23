@@ -61,6 +61,13 @@ body_clean = re.sub(r"\s+", " ", body_nourl).strip()
 BODY_MAX = 350
 body_summary = body_clean[:BODY_MAX] + ("…" if len(body_clean) > BODY_MAX else "")
 
+# Preserve original newlines + paragraph structure for the triage-digest
+# blockquote (needs_reply items inline the full body). Encoded as
+# single-line base64 so the summary `key: value` parser in
+# scripts/deploy/lib/triage_digest_build.py stays untouched.
+body_for_inline = body_trimmed.strip()
+body_b64 = base64.b64encode(body_for_inline.encode("utf-8", errors="replace")).decode("ascii")
+
 RENTAL_TASK_LIST = "clBVU3IyeDFBTXdUSC1jRQ"
 PERSONAL_TASK_LIST = "NDRqWEpXa21ZWFNScGoxWg"
 
@@ -211,6 +218,7 @@ DraftNeeded: {draft}
 AlertNeeded: {alert}
 FamilyVIP: {family}
 BodySummary: {body_summary}
+BodyB64: {body_b64}
 ---
 """
 pathlib.Path(out).write_text(text)

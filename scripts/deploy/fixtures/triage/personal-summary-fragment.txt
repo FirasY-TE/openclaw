@@ -1,0 +1,19 @@
+ID: personal-fixture-1
+From: "Someone" <someone@example.com>
+SenderEmail: someone@example.com
+Subject: Need your reply on the invoice
+Date: Sun, 13 Apr 2026 14:22:00 -0500
+Labels: INBOX, UNREAD
+Mailbox: personal
+MailboxType: primary
+AccountContext: personal
+Priority: info
+TaskList: none
+CreateTask: no
+CalendarPrompt: no
+DraftNeeded: maybe
+AlertNeeded: no
+FamilyVIP: no
+BodySummary: Hi — following up on the invoice we sent last week. Do you want to pay via ACH or check? Let me know if there are blockers on your end. Thanks.
+BodyB64: SGkgQmVsbGEsCgpGb2xsb3dpbmcgdXAgb24gdGhlIGludm9pY2Ugd2Ugc2VudCBsYXN0IHdlZWsuIERvIHlvdSB3YW50IHRvIHBheSB2aWEgQUNIIG9yIGNoZWNrPwoKTGV0IG1lIGtub3cgaWYgdGhlcmUgYXJlIGJsb2NrZXJzIG9uIHlvdXIgZW5kLgoKVGhhbmtzLApTb21lb25l
+---

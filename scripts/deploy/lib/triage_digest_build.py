@@ -11,6 +11,7 @@ Optional: TRIAGE_LLM_REFINE=1 reserved for future LLM refinement (no-op when uns
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import secrets
@@ -155,6 +156,25 @@ def _body_summary_gmail(fields: dict[str, str]) -> str:
     return raw[:BODY_SUMMARY_MAX].rstrip() + "…"
 
 
+def _full_body_gmail(fields: dict[str, str]) -> str:
+    """Decode the single-line base64 full-body field emitted by the review
+    scripts (`BodyB64`). Returns the decoded plain-text body with newlines
+    preserved, empty string if absent or undecodable.
+
+    This is the source material that gets rendered as a Markdown blockquote
+    beneath each needs_reply Gmail item so the agent has drafting context
+    directly in the thread with no external fetch.
+    """
+    raw = (fields.get("BodyB64") or "").strip()
+    if not raw:
+        return ""
+    try:
+        decoded = base64.b64decode(raw, validate=False).decode("utf-8", errors="replace")
+    except (ValueError, UnicodeDecodeError):
+        return ""
+    return decoded.strip()
+
+
 def _coerce_str(value: Any) -> str:
     """Return value if it is a non-empty string; empty string otherwise.
 
@@ -291,6 +311,10 @@ def build_items(
             }
             if refs.get("bodySummary"):
                 item["bodySummary"] = refs["bodySummary"]
+            if cat == "needs_reply":
+                full_body = _full_body_gmail(fields)
+                if full_body:
+                    item["fullBody"] = full_body
             items.append(item)
 
     rental_path = base_dir / "output" / "gmail-review-rental-summary-latest.txt"
@@ -312,6 +336,10 @@ def build_items(
             }
             if refs.get("bodySummary"):
                 item["bodySummary"] = refs["bodySummary"]
+            if cat == "needs_reply":
+                full_body = _full_body_gmail(fields)
+                if full_body:
+                    item["fullBody"] = full_body
             items.append(item)
 
     hosp_path = base_dir / "output" / "hospitable-events-latest.json"
