@@ -228,6 +228,12 @@ docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/opencl
 --- Inspect Hospitable Events Latest ---
 docker exec -it openclaw-ridl-openclaw-1 bash -lc 'jq '\''{fetchedAt, propCnt: (.properties.data|length), resCnt: (.reservations.data|length), msgCnt: (.messages.data|length)}'\'' /data/openclaw-gws/output/hospitable-events-latest.json'
 
+--- Inspect Hospitable Financial + Calendar Coverage ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc 'jq '\''{topKeys:(keys), reservationKeys:(.reservations.data[0]|keys), financialKeys:(.reservations.data[0].financials|keys), calendarCount:(.calendars.data|length), calendarDayKeys:(.calendars.data[0].data.days[0]|keys)}'\'' /data/openclaw-gws/output/hospitable-events-latest.json'
+
+--- Show Upcoming Open Nights + Prices (first property) ---
+docker exec -it openclaw-ridl-openclaw-1 bash -lc 'python3 -c "import json; d=json.load(open(\"/data/openclaw-gws/output/hospitable-events-latest.json\")); cal=(d.get(\"calendars\",{}).get(\"data\",[]) or [{}])[0].get(\"data\",{}).get(\"days\",[]); open_days=[x for x in cal if ((x.get(\"status\") or {}).get(\"available\") is True)]; print(open_days[:10])"'
+
 --- Run Rental Signal Merge ---
 docker exec -it openclaw-ridl-openclaw-1 bash -lc '/data/openclaw-gws/bin/openclaw-rental-signal-merge'
 
@@ -323,3 +329,31 @@ ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 rg '\\[FALLBACK from syst
 
 # 3) Restore step: rerun normally (no env override) to confirm System/Auth topic route is active again
 ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/openclaw-gws-auth-health-check"
+
+===== PHASE 2 UAT — TRIAGE DIGEST =====
+
+--- Manual digest run (same as host cron entrypoint, as user node) ---
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/openclaw-gws-triage-digest"
+
+--- Inspect latest digest artifacts ---
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 head -80 /data/openclaw-gws/output/triage-digest-latest.md"
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 jq '{generatedAt, draftTokens, itemCount: (.items|length)}' /data/openclaw-gws/output/triage-digest-latest.json"
+
+--- Tail triage-related logs (if logging added to wrapper; otherwise use OpenClaw gateway logs) ---
+ssh openclaw-vps "docker logs openclaw-ridl-openclaw-1 2>&1 | tail -80"
+
+--- On-demand from gateway container (CLI) ---
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 openclaw triage"
+
+--- Telegram /triage (authorized operator only) ---
+Send /triage from the paired operator account; expect a short completion message. Verify the digest message appears in the Triage Digest forum topic.
+
+--- Gmail needs-reply finalization flow (token commands) ---
+1) Open the digest in Triage Digest topic and copy the inline token from the needs-reply row.
+2) Use `/bash tdr save <token>` to save/update the draft.
+3) Use `/bash tdr send-now <token>` when ready to send via openclaw-gws-triage-reply.
+4) Tuning behavior lives in `scripts/deploy/prompts/triage-draft-runbook.md` (markdown-first runbook).
+
+--- VPS helper (manual) ---
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/openclaw-gws-triage-reply draft TOKEN"
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 /data/openclaw-gws/bin/openclaw-gws-triage-reply send-now TOKEN"

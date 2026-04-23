@@ -47,12 +47,17 @@ Container User Model:
 5. Hospitable Fetch Agent ✅ OPERATIONAL (Phase 3)
    - script: /data/openclaw-gws/bin/openclaw-hospitable-fetch
    - auth: PAT from /data/openclaw-gws/config/hospitable.json
-   - fetches: properties, reservations, per-reservation messages
+   - fetches:
+       properties
+       reservations (include=guest,properties,financials)
+       per-reservation messages
+       property calendars (90-day window; availability + nightly price)
    - writes: /data/openclaw-gws/output/hospitable-events-latest.json
    - logs: /data/openclaw-gws/logs/hospitable-fetch.log
    - current API behavior handled:
      - /v2/reservations requires properties[] and date window
      - messages come from /v2/reservations/{id}/messages (no top-level /v2/messages)
+     - calendars come from /v2/properties/{id}/calendar (no top-level /v2/calendar)
 
 6. Rental Signal Merge Agent ✅ OPERATIONAL (Phase 3)
    - script: /data/openclaw-gws/bin/openclaw-rental-signal-merge
@@ -90,7 +95,25 @@ Container User Model:
    - consumed by: morning brief (health source + topAlerts if degraded)
    - reauth runbook: docs/commands.txt (TOKEN REFRESH RUNBOOK section)
 
-9. Daily Brief Agent ✅ UPGRADED (Phase 3)
+9. End-of-Day Triage Digest Agent ✅ OPERATIONAL (Phase 2)
+   - script: /data/openclaw-gws/bin/openclaw-gws-triage-digest
+   - library: scripts/deploy/lib/triage_digest_build.py (also in-repo under scripts/deploy/lib/)
+   - inputs (under /data/openclaw-gws/output/):
+       gmail-review-summary-latest.txt (personal)
+       gmail-review-rental-summary-latest.txt (rental)
+       hospitable-events-latest.json
+   - outputs:
+      triage-digest-latest.md, triage-digest-latest.json
+   - window: America/Chicago calendar day from local midnight through run time
+   - delivery: logical route `triage_digest` via send_with_topic_fallback (topic primary, DM fallback)
+   - Gmail needs-reply rows: inline token in digest text; finalize with `/bash tdr save <token>` or `/bash tdr send-now <token>`
+   - state map: /data/openclaw-gws/state/triage-draft-tokens.json
+   - operator behavior tuning runbook: scripts/deploy/prompts/triage-draft-runbook.md
+   - reply helper: /data/openclaw-gws/bin/openclaw-gws-triage-reply (draft | replace | send | send-now + token)
+   - on-demand: openclaw triage (gateway) and Telegram /triage (authorized operator)
+   - scheduled: host cron 4:30 PM America/Chicago — see docs/cron-jobs.txt
+
+10. Daily Brief Agent ✅ UPGRADED (Phase 3)
    - script: /data/openclaw-gws/bin/openclaw-morning-context
    - consumes prepared files only:
        personal/rental summaries, calendar, tasks, rental-events-context,

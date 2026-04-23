@@ -1,0 +1,258 @@
+#!/usr/bin/env python3
+"""
+Gmail triage draft helper — invoked from OpenClaw Telegram callbacks (and manual ops).
+
+Uses gws-personal / gws-rental wrappers like openclaw-gws-appointment-confirm.
+
+State file: /data/openclaw-gws/state/triage-draft-tokens.json
+
+Subcommands:
+  draft <token> [body...]    Create a Gmail draft reply (users.drafts.create). If body text is
+                             provided, use it; otherwise use a placeholder.
+  replace <token> [body...]  Bump draftTextVersion; optional new plain-text body rebuilds draft.
+  send <token>               Send draft via users.drafts.send (requires draftId from prior draft).
+
+Gmail calls use the gws CLI shape:
+  <gws> gmail users messages get --params JSON
+  <gws> gmail users drafts create --params JSON --json JSON
+  <gws> gmail users drafts send --params JSON
+  <gws> gmail users drafts delete --params JSON   (used before replace rebuild)
+"""
+
+from __future__ import annotations
+
+import base64
+import json
+import os
+import re
+import subprocess
+import sys
+from email.message import EmailMessage
+from pathlib import Path
+from typing import Any
+
+STATE_FILE = "/data/openclaw-gws/state/triage-draft-tokens.json"
+
+GWS_BIN = {
+    "personal": os.environ.get("OPENCLAW_GWS_PERSONAL", "/data/openclaw-gws/bin/gws-personal"),
+    "rental": os.environ.get("OPENCLAW_GWS_RENTAL", "/data/openclaw-gws/bin/gws-rental"),
+}
+
+
+def load_state() -> dict[str, Any]:
+    p = Path(STATE_FILE)
+    if not p.is_file():
+        return {"version": 1, "byToken": {}}
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+def save_state(data: dict[str, Any]) -> None:
+    p = Path(STATE_FILE)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = p.with_suffix(p.suffix + ".tmp")
+    tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    tmp.replace(p)
+
+
+def gws_run(account: str, *cli_args: str) -> dict[str, Any]:
+    exe = GWS_BIN.get(account)
+    if not exe or not Path(exe).is_file():
+        raise SystemExit(f"gws wrapper not found for account={account}: {exe}")
+    cmd = [exe, *cli_args]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or f"exit {proc.returncode}")
+    out = proc.stdout.strip()
+    if not out:
+        return {}
+    try:
+        return json.loads(out)
+    except json.JSONDecodeError:
+        return {"_unparsed": out}
+
+
+def header_map(payload: dict[str, Any]) -> dict[str, str]:
+    headers: dict[str, str] = {}
+    for h in payload.get("payload", {}).get("headers", []) or []:
+        name = (h.get("name") or "").lower()
+        if name:
+            headers[name] = h.get("value") or ""
+    return headers
+
+
+def build_reply_raw(
+    orig: dict[str, Any],
+    body_text: str,
+    thread_id: str | None,
+) -> str:
+    h = header_map(orig)
+    subj = h.get("subject", "")
+    if not subj.lower().startswith("re:"):
+        subj = f"Re: {subj}"
+    msg = EmailMessage()
+    msg["Subject"] = subj
+    recipient = h.get("reply-to") or h.get("from", "")
+    if recipient:
+        msg["To"] = recipient
+    if h.get("message-id"):
+        msg["In-Reply-To"] = h["message-id"]
+    refs = h.get("references", "")
+    if h.get("message-id"):
+        msg["References"] = f"{refs} {h['message-id']}".strip()
+    msg.set_content(body_text or "(draft)")
+    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("ascii").rstrip("=")
+    return raw
+
+
+def cmd_draft(token: str, body_parts: list[str] | None = None) -> None:
+    state = load_state()
+    entry = state.get("byToken", {}).get(token)
+    if not entry:
+        raise SystemExit("unknown token")
+    account = entry["account"]
+    mid = entry["gmailMessageId"]
+    orig = gws_run(
+        account,
+        "gmail",
+        "users",
+        "messages",
+        "get",
+        "--params",
+        json.dumps({"userId": "me", "id": mid, "format": "full"}),
+    )
+    thread_id = orig.get("threadId") or entry.get("threadId")
+    body = " ".join(body_parts).strip() if body_parts else ""
+    if not body:
+        body = (entry.get("lastDraftText") or "").strip()
+    if not body:
+        body = "(Draft reply — please replace with your message)"
+    raw = build_reply_raw(orig, body, thread_id)
+    msg_obj: dict[str, Any] = {"raw": raw}
+    if thread_id:
+        msg_obj["threadId"] = thread_id
+    created = gws_run(
+        account,
+        "gmail",
+        "users",
+        "drafts",
+        "create",
+        "--params",
+        json.dumps({"userId": "me"}),
+        "--json",
+        json.dumps({"message": msg_obj}),
+    )
+    draft_id = created.get("id")
+    if not draft_id:
+        raise SystemExit(f"draft create returned no id: {created!r}")
+    entry["draftId"] = draft_id
+    entry["draftTextVersion"] = int(entry.get("draftTextVersion") or 0) + 1
+    state.setdefault("byToken", {})[token] = entry
+    save_state(state)
+    print("ok: draft created", draft_id)
+
+
+def cmd_replace(token: str, body_parts: list[str]) -> None:
+    state = load_state()
+    entry = state.get("byToken", {}).get(token)
+    if not entry:
+        raise SystemExit("unknown token")
+    account = entry["account"]
+    body = " ".join(body_parts).strip()
+    entry["draftTextVersion"] = int(entry.get("draftTextVersion") or 0) + 1
+    if body:
+        mid = entry["gmailMessageId"]
+        orig = gws_run(
+            account,
+            "gmail",
+            "users",
+            "messages",
+            "get",
+            "--params",
+            json.dumps({"userId": "me", "id": mid, "format": "full"}),
+        )
+        thread_id = orig.get("threadId") or entry.get("threadId")
+        raw = build_reply_raw(orig, body, thread_id)
+        msg_obj: dict[str, Any] = {"raw": raw}
+        if thread_id:
+            msg_obj["threadId"] = thread_id
+        old_draft = entry.get("draftId")
+        if old_draft:
+            try:
+                gws_run(
+                    account,
+                    "gmail",
+                    "users",
+                    "drafts",
+                    "delete",
+                    "--params",
+                    json.dumps({"userId": "me", "id": old_draft}),
+                )
+            except RuntimeError:
+                pass
+        created = gws_run(
+            account,
+            "gmail",
+            "users",
+            "drafts",
+            "create",
+            "--params",
+            json.dumps({"userId": "me"}),
+            "--json",
+            json.dumps({"message": msg_obj}),
+        )
+        entry["draftId"] = created.get("id")
+    state.setdefault("byToken", {})[token] = entry
+    save_state(state)
+    print("ok: replace", entry["draftTextVersion"])
+
+
+def cmd_send(token: str) -> None:
+    state = load_state()
+    entry = state.get("byToken", {}).get(token)
+    if not entry:
+        raise SystemExit("unknown token")
+    draft_id = entry.get("draftId")
+    if not draft_id:
+        raise SystemExit("no draftId; run draft first")
+    account = entry["account"]
+    # Gmail drafts.send expects the draft ID in the request body, not params.
+    gws_run(
+        account,
+        "gmail",
+        "users",
+        "drafts",
+        "send",
+        "--params",
+        json.dumps({"userId": "me"}),
+        "--json",
+        json.dumps({"id": draft_id}),
+    )
+    entry["draftId"] = None
+    state.setdefault("byToken", {})[token] = entry
+    save_state(state)
+    print("ok: sent")
+
+
+def main() -> None:
+    if len(sys.argv) < 3:
+        print("usage: openclaw-gws-triage-reply draft|replace|send <token> [body...]", file=sys.stderr)
+        raise SystemExit(2)
+    sub = sys.argv[1].strip().lower()
+    token = sys.argv[2].strip()
+    if not re.fullmatch(r"[0-9a-f]{6,12}", token):
+        raise SystemExit("invalid token")
+    if sub == "draft":
+        cmd_draft(token, sys.argv[3:])
+    elif sub == "replace":
+        cmd_replace(token, sys.argv[3:])
+    elif sub == "send":
+        cmd_send(token)
+    elif sub == "send-now":
+        cmd_draft(token, sys.argv[3:])
+        cmd_send(token)
+    else:
+        raise SystemExit(f"unknown subcommand: {sub}")
+
+
+if __name__ == "__main__":
+    main()
