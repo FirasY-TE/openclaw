@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_execute
-stopped_at: Opened Phase 02.1.2 (triage-topic agent context + ByteRover in-container)
-last_updated: "2026-04-28T00:00:00.000Z"
-last_activity: 2026-04-28
+status: ready_to_plan
+stopped_at: Phase 02.1.2 implementation committed; human UAT + VPS patch deploy outstanding
+last_updated: "2026-04-29T00:00:00.000Z"
+last_activity: 2026-04-29
 progress:
   total_phases: 9
   completed_phases: 3
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-08)
 
 **Core value:** One inbox that cuts through noise across communication sources — triage, drafts, and approvals so nothing important is missed.
-**Current focus:** Phase 02.1.2 — Triage Topic Agent Context & ByteRover In-Container
+**Current focus:** Phase 02.2 or human UAT closure for 02.1.2 (deploy patched gateway + topic config + `BYTEROVER_API_KEY`)
 
 ## Current Position
 
-Phase: 02.1.2 (Triage Topic Agent Context — Plan C gap closure) — READY TO EXECUTE
-Plan: 0 of 2
-Status: Plans written; implementation not started
-Last activity: 2026-04-28
+Phase: 02.1.2 — implementation done in repo; staged roll (patch/VPS/key/UAT still open)
+Plan: 2 of 2 (summaries recorded)
+Status: See `02-1-2-VERIFICATION.md` — `human_needed` for live Telegram + brv connect after secrets
+Last activity: 2026-04-29
 
 Progress: [██████░░░░] 73%
 

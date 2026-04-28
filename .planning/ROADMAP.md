@@ -180,8 +180,8 @@ Plans:
 
 Plans:
 
-- [ ] `02-1-2-01-PLAN.md` — Telegram triage topic: inject bounded `triage-digest-latest.md` into inbound agent context; tests + docs; VPS patch/deploy
-- [ ] `02-1-2-02-PLAN.md` — Ops: wire ByteRover / `brv` non-interactive auth in compose; verify connect + smoke in-container
+- [x] `02-1-2-01-PLAN.md` — Telegram triage topic: inject bounded `triage-digest-latest.md` into inbound agent context; tests + docs; VPS patch/deploy
+- [x] `02-1-2-02-PLAN.md` — Ops: wire ByteRover / `brv` non-interactive auth in compose; verify connect + smoke in-container
 
 ---
 
@@ -320,18 +320,18 @@ Plans:
 
 ## Status
 
-| Phase  | Status                                 | Notes                                                                                 |
-| ------ | -------------------------------------- | ------------------------------------------------------------------------------------- |
-| 1      | Completed                              | Foundation — topic routing live                                                       |
-| 2      | Partial                                | Plans 02-01 and 02-02 completed; 02-03 superseded by 02.1                             |
-| 02.1   | Implementation done; UAT surfaced gaps | Plan C pivot — simplify triage draft surface; live UAT blocked by 02.1.1 gaps         |
-| 02.1.1 | Complete                               | Plan 01 (dict-leak fix) + Plan 02 (inline body + header-line) shipped + verified live |
-| 02.1.2 | Not started                            | Triage-topic digest injected into inbound agent ctx; ByteRover auth in VPS container  |
-| 02.2   | Not started                            | Version alignment across local, VPS, and Mac GUI                                      |
-| 3      | Not started                            | Prior Beeper design work available                                                    |
-| 4      | Not started                            | API investigation needed early                                                        |
-| 5      | Not started                            | After Phases 2-4 stabilize                                                            |
+| Phase  | Status                                  | Notes                                                                                            |
+| ------ | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| 1      | Completed                               | Foundation — topic routing live                                                                  |
+| 2      | Partial                                 | Plans 02-01 and 02-02 completed; 02-03 superseded by 02.1                                        |
+| 02.1   | Implementation done; UAT surfaced gaps  | Plan C pivot — simplify triage draft surface; live UAT blocked by 02.1.1 gaps                    |
+| 02.1.1 | Complete                                | Plan 01 (dict-leak fix) + Plan 02 (inline body + header-line) shipped + verified live            |
+| 02.1.2 | Implemented (deploy + live UAT pending) | Core inject + ops template/README; VPS patch/brv login after secrets — see phase VERIFICATION.md |
+| 02.2   | Not started                             | Version alignment across local, VPS, and Mac GUI                                                 |
+| 3      | Not started                             | Prior Beeper design work available                                                               |
+| 4      | Not started                             | API investigation needed early                                                                   |
+| 5      | Not started                             | After Phases 2-4 stabilize                                                                       |
 
 ---
 
-_Last updated: 2026-04-28 (opened Phase 02.1.2 — triage-topic agent context + ByteRover container auth)_
+_Last updated: 2026-04-29 (Phase 02.1.2 code + docs; human UAT deferred to deploy/config)_

@@ -30,6 +30,7 @@ One inbox that cuts through the noise across all communication sources — surfa
 - ✓ Cron-based scheduling infrastructure — existing
 - ✓ Telegram DM delivery and inline button support — existing
 - ✓ Paired macOS node for local operations — existing
+- ✓ Telegram triage-topic canonical digest injection (Phase 02.1.2) — opt-in per Forum thread via `triageDigestSnapshot`; same markdown file as GWS digest output (`openclaw` core + VPS config)
 
 ### Active
 
@@ -143,4 +144,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-04-13 — clarified legacy Phase 1-3 references vs roadmap Phase 1-5_
+_Last updated: 2026-04-29 — validated triage-topic digest inbound snapshot (Phase 02.1.2) pending live deploy/UAT_
