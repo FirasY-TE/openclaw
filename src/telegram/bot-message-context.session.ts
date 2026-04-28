@@ -34,6 +34,12 @@ import {
 } from "./bot/helpers.js";
 import type { TelegramContext } from "./bot/types.js";
 import { resolveTelegramGroupPromptSettings } from "./group-config-helpers.js";
+import {
+  formatTriageDigestSnapshotSection,
+  readTriageDigestSnapshot,
+  resolveTriageDigestSnapshotPath,
+  shouldInjectTriageDigestSnapshot,
+} from "./triage-topic-digest-snapshot.js";
 
 export async function buildTelegramInboundContextPayload(params: {
   cfg: OpenClawConfig;
@@ -146,7 +152,24 @@ export async function buildTelegramInboundContextPayload(params: {
     previousTimestamp,
     envelope: envelopeOptions,
   });
-  let combinedBody = body;
+  const snapshotPath = resolveTriageDigestSnapshotPath(topicConfig?.triageDigestSnapshotPath);
+  let triageDigestInjection = "";
+  if (
+    shouldInjectTriageDigestSnapshot({
+      isForum,
+      resolvedThreadId,
+      topicConfig,
+    })
+  ) {
+    triageDigestInjection = `${formatTriageDigestSnapshotSection(
+      readTriageDigestSnapshot(snapshotPath),
+    )}\n\n`;
+  }
+  const envelopeBody = triageDigestInjection ? `${triageDigestInjection}${body}` : body;
+  const bodyForAgentWithDigest = triageDigestInjection
+    ? `${triageDigestInjection}${bodyText}`
+    : bodyText;
+  let combinedBody = envelopeBody;
   if (isGroup && historyKey && historyLimit > 0) {
     combinedBody = buildPendingHistoryContextFromMap({
       historyMap: groupHistories,
@@ -185,7 +208,7 @@ export async function buildTelegramInboundContextPayload(params: {
   const contextMedia = [...currentMediaForContext, ...replyMedia];
   const ctxPayload = finalizeInboundContext({
     Body: combinedBody,
-    BodyForAgent: bodyText,
+    BodyForAgent: bodyForAgentWithDigest,
     InboundHistory: inboundHistory,
     RawBody: rawBody,
     CommandBody: commandBody,
@@ -301,11 +324,11 @@ export async function buildTelegramInboundContextPayload(params: {
   }
 
   if (shouldLogVerbose()) {
-    const preview = body.slice(0, 200).replace(/\n/g, "\\n");
+    const preview = envelopeBody.slice(0, 200).replace(/\n/g, "\\n");
     const mediaInfo = allMedia.length > 1 ? ` mediaCount=${allMedia.length}` : "";
     const topicInfo = resolvedThreadId != null ? ` topic=${resolvedThreadId}` : "";
     logVerbose(
-      `telegram inbound: chatId=${chatId} from=${ctxPayload.From} len=${body.length}${mediaInfo}${topicInfo} preview="${preview}"`,
+      `telegram inbound: chatId=${chatId} from=${ctxPayload.From} len=${envelopeBody.length}${mediaInfo}${topicInfo} preview="${preview}"`,
     );
   }
 

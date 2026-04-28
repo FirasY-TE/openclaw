@@ -69,6 +69,8 @@ export const TelegramTopicSchema = z
     allowFrom: z.array(z.union([z.string(), z.number()])).optional(),
     systemPrompt: z.string().optional(),
     agentId: z.string().optional(),
+    triageDigestSnapshot: z.boolean().optional(),
+    triageDigestSnapshotPath: z.string().optional(),
   })
   .strict();
 

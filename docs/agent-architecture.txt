@@ -121,6 +121,16 @@ Container User Model:
    - on-demand: openclaw triage (gateway) and Telegram /triage (authorized operator)
    - scheduled: host cron 4:30 PM America/Chicago — see docs/cron-jobs.txt
 
+   Telegram triage-topic digest injection (Phase 02.1.2, OpenClaw core):
+   - In `channels.telegram.groups.<chatId>.topics.<message_thread_id>`, set
+     `triageDigestSnapshot: true` only on the Forum thread used for End-of-Day Triage Digest reply flow.
+   - On inbound messages in that thread, OpenClaw prepends bounded UTF-8 text from the same file the
+     digest cron writes (`triage-digest-latest.md`), before the formatted user envelope and in
+     `BodyForAgent` (cap: 32768 chars, tail truncation marker when exceeded).
+   - Path resolution: optional per-topic `triageDigestSnapshotPath`, else env
+     `OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_PATH`, else `/data/openclaw-gws/output/triage-digest-latest.md`.
+   - If the file is missing or whitespace-only, the agent still receives an explicit sentinel line (never silent failure).
+
 10. Daily Brief Agent ✅ UPGRADED (Phase 3)
    - script: /data/openclaw-gws/bin/openclaw-morning-context
    - consumes prepared files only:

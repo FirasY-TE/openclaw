@@ -196,6 +196,17 @@ export type TelegramTopicConfig = {
   disableAudioPreflight?: boolean;
   /** Route this topic to a specific agent (overrides group-level and binding routing). */
   agentId?: string;
+  /**
+   * When true in a Forum topic thread, prepend the canonical triage digest markdown file
+   * to inbound agent context (bounded). Opt in per `topics.<message_thread_id>` so only
+   * the Triage Digest thread receives the snapshot (not other topics in the same group).
+   */
+  triageDigestSnapshot?: boolean;
+  /**
+   * Optional path to `triage-digest-latest.md`. Defaults to `OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_PATH`
+   * or `/data/openclaw-gws/output/triage-digest-latest.md`.
+   */
+  triageDigestSnapshotPath?: string;
 };
 
 export type TelegramGroupConfig = {
