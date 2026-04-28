@@ -122,8 +122,10 @@ Container User Model:
    - scheduled: host cron 4:30 PM America/Chicago — see docs/cron-jobs.txt
 
    Telegram triage-topic digest injection (Phase 02.1.2, OpenClaw core):
-   - In `channels.telegram.groups.<chatId>.topics.<message_thread_id>`, set
-     `triageDigestSnapshot: true` only on the Forum thread used for End-of-Day Triage Digest reply flow.
+   - **Preferred on VPS/hosted gateways:** set process env `OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_CHAT_ID` (Telegram supergroup chat id string, e.g. `-1003943940218`) and
+     `OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_TOPIC_ID` (`message_thread_id` for the Forum thread, e.g. `9`).
+     Compose can pass both via `.env`; avoids channel-plugin JSON Schema rejecting custom topic keys on some setups.
+   - **Alternatively** in config: `channels.telegram.groups.<chatId>.topics.<message_thread_id>.triageDigestSnapshot: true` on the Forum thread used for End-of-Day Triage Digest reply flow (when the schema whitelist allows your OpenClaw build).
    - On inbound messages in that thread, OpenClaw prepends bounded UTF-8 text from the same file the
      digest cron writes (`triage-digest-latest.md`), before the formatted user envelope and in
      `BodyForAgent` (cap: 32768 chars, tail truncation marker when exceeded).

@@ -59,12 +59,21 @@ export function formatTriageDigestSnapshotSection(result: TriageDigestReadResult
 
 export function shouldInjectTriageDigestSnapshot(params: {
   isForum: boolean;
+  chatId: number | string;
   resolvedThreadId: number | undefined;
   topicConfig: TelegramTopicConfig | undefined;
 }): boolean {
-  return (
-    params.isForum &&
-    typeof params.resolvedThreadId === "number" &&
-    params.topicConfig?.triageDigestSnapshot === true
-  );
+  if (!params.isForum || typeof params.resolvedThreadId !== "number") {
+    return false;
+  }
+  if (params.topicConfig?.triageDigestSnapshot === true) {
+    return true;
+  }
+  /** VPS/ops opt-in when channel JSON Schema cannot list custom topic keys (AJV footprint). */
+  const envChat = process.env.OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_CHAT_ID?.trim();
+  const envTopic = process.env.OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_TOPIC_ID?.trim();
+  if (!envChat?.length || !envTopic?.length) {
+    return false;
+  }
+  return String(params.chatId) === envChat && String(params.resolvedThreadId) === envTopic;
 }

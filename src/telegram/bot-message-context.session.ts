@@ -157,6 +157,7 @@ export async function buildTelegramInboundContextPayload(params: {
   if (
     shouldInjectTriageDigestSnapshot({
       isForum,
+      chatId,
       resolvedThreadId,
       topicConfig,
     })

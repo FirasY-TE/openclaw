@@ -95,10 +95,13 @@ describe("triage-topic-digest-snapshot", () => {
     rmSync(tmp, { recursive: true, force: true });
   });
 
-  it("shouldInjectTriageDigestSnapshot is opt-in via topic config only", () => {
+  const sampleChat = "-1003943940218";
+
+  it("shouldInjectTriageDigestSnapshot is opt-in via topic config or VPS env match", () => {
     expect(
       shouldInjectTriageDigestSnapshot({
         isForum: true,
+        chatId: sampleChat,
         resolvedThreadId: 9,
         topicConfig: { triageDigestSnapshot: true },
       }),
@@ -106,6 +109,7 @@ describe("triage-topic-digest-snapshot", () => {
     expect(
       shouldInjectTriageDigestSnapshot({
         isForum: false,
+        chatId: sampleChat,
         resolvedThreadId: 9,
         topicConfig: { triageDigestSnapshot: true },
       }),
@@ -113,6 +117,7 @@ describe("triage-topic-digest-snapshot", () => {
     expect(
       shouldInjectTriageDigestSnapshot({
         isForum: true,
+        chatId: sampleChat,
         resolvedThreadId: undefined,
         topicConfig: { triageDigestSnapshot: true },
       }),
@@ -120,9 +125,46 @@ describe("triage-topic-digest-snapshot", () => {
     expect(
       shouldInjectTriageDigestSnapshot({
         isForum: true,
+        chatId: sampleChat,
         resolvedThreadId: 9,
         topicConfig: {},
       }),
     ).toBe(false);
+  });
+
+  it("shouldInjectTriageDigestSnapshot matches OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_CHAT_ID and _TOPIC_ID", () => {
+    const prevChat = process.env.OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_CHAT_ID;
+    const prevTopic = process.env.OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_TOPIC_ID;
+    try {
+      process.env.OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_CHAT_ID = sampleChat;
+      process.env.OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_TOPIC_ID = "9";
+      expect(
+        shouldInjectTriageDigestSnapshot({
+          isForum: true,
+          chatId: Number(sampleChat),
+          resolvedThreadId: 9,
+          topicConfig: {},
+        }),
+      ).toBe(true);
+      expect(
+        shouldInjectTriageDigestSnapshot({
+          isForum: true,
+          chatId: "-100111",
+          resolvedThreadId: 9,
+          topicConfig: {},
+        }),
+      ).toBe(false);
+    } finally {
+      if (prevChat === undefined) {
+        delete process.env.OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_CHAT_ID;
+      } else {
+        process.env.OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_CHAT_ID = prevChat;
+      }
+      if (prevTopic === undefined) {
+        delete process.env.OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_TOPIC_ID;
+      } else {
+        process.env.OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_TOPIC_ID = prevTopic;
+      }
+    }
   });
 });
