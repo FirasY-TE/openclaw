@@ -151,6 +151,40 @@ Plans:
 
 ---
 
+### Phase 02.1.2: Triage Topic Agent Context + ByteRover In-Container (Plan C gap closure)
+
+**Goal:** Make Plan C end-to-end: when the operator types in the **Triage Digest** Forum topic, Bella receives the canonical digest markdown (`triage-digest-latest.md`) in her inbound agent context — not hypothetical thread scrolling she cannot access. Separately, align ByteRover / `brv` authentication so Bella’s memory tools succeed **inside `openclaw-ridl-openclaw-1`** (same cwd she uses).
+
+**Why:** Live UAT (April 2026) showed Bella could not summarize or draft from digest content she had just posted (“paste or forward the digest”), while session traces showed fallback `byterover` / `memory_search` paths failing authentication or returning empty hits. Digest rendering from 02.1.1 is correct; consumption by the inbound agent layer was not wired.
+
+**Requirements:**
+
+- Configurable Telegram Forum `(chatId, topic thread id)` predicate that injects bounded digest Markdown into Bella’s inbound envelope (explicit match; no heuristic)
+- Oversized snapshot truncation + clear labeling so the operator message + digest snapshot boundaries are obvious to the model
+- VPS: `brv providers connect byterover` succeeds from `/data/.openclaw/workspace` after secrets are wired in compose (`openclaw-ops` template only; never commit real tokens)
+- Core Telegram changes follow upstream PR in `openclaw/` plus `openclaw-ops/vps/` patch/deploy for production container (per VPS rules)
+
+**Success criteria:**
+
+- `summary`, `draft <name>`, `ignore <name>` exercised in triage topic **without paste** — Bella cites grounded digest lines/items
+- No repeated session-log loop of “ByteRover Provider requires authentication” on connect during normal reply turns after plan 02 completes
+- `pnpm build` + targeted Telegram tests pass for injection logic
+
+**UAT:**
+
+- [ ] Digest posted to Telegram; operator sends “summary” in same topic → Bella lists items consistent with `/data/openclaw-gws/output/triage-digest-latest.md` without requesting paste
+- [ ] Operator invokes a draft for a visible needs_reply item (natural phrasing such as drafting for Fred or the rental inquiry) → draft references inline blockquote facts (address, dates) without “I don’t see the email”
+- [ ] Inside container after deploy: `/data/.brv-cli/bin/brv providers connect byterover` returns success when run from documented cwd
+
+**Plans:** 2 plans
+
+Plans:
+
+- [ ] `02-1-2-01-PLAN.md` — Telegram triage topic: inject bounded `triage-digest-latest.md` into inbound agent context; tests + docs; VPS patch/deploy
+- [ ] `02-1-2-02-PLAN.md` — Ops: wire ByteRover / `brv` non-interactive auth in compose; verify connect + smoke in-container
+
+---
+
 ### Phase 02.2: Version Alignment + Upgrade Stabilization (Local + VPS + Mac GUI)
 
 **Goal:** Align OpenClaw versions across local CLI/runtime, VPS runtime, and Mac GUI app after the 02.1 simplification rollout, with explicit health gates and rollback checkpoints.
@@ -292,6 +326,7 @@ Plans:
 | 2      | Partial                                | Plans 02-01 and 02-02 completed; 02-03 superseded by 02.1                             |
 | 02.1   | Implementation done; UAT surfaced gaps | Plan C pivot — simplify triage draft surface; live UAT blocked by 02.1.1 gaps         |
 | 02.1.1 | Complete                               | Plan 01 (dict-leak fix) + Plan 02 (inline body + header-line) shipped + verified live |
+| 02.1.2 | Not started                            | Triage-topic digest injected into inbound agent ctx; ByteRover auth in VPS container  |
 | 02.2   | Not started                            | Version alignment across local, VPS, and Mac GUI                                      |
 | 3      | Not started                            | Prior Beeper design work available                                                    |
 | 4      | Not started                            | API investigation needed early                                                        |
@@ -299,4 +334,4 @@ Plans:
 
 ---
 
-_Last updated: 2026-04-23 (02.1.1 complete — both plans shipped)_
+_Last updated: 2026-04-28 (opened Phase 02.1.2 — triage-topic agent context + ByteRover container auth)_

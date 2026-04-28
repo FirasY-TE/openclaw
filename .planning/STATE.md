@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 02-1-1-02-PLAN.md
-last_updated: "2026-04-23T05:15:25.431Z"
-last_activity: 2026-04-23
+status: ready_to_execute
+stopped_at: Opened Phase 02.1.2 (triage-topic agent context + ByteRover in-container)
+last_updated: "2026-04-28T00:00:00.000Z"
+last_activity: 2026-04-28
 progress:
-  total_phases: 8
+  total_phases: 9
   completed_phases: 3
-  total_plans: 9
+  total_plans: 11
   completed_plans: 8
-  percent: 78
+  percent: 73
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-08)
 
 **Core value:** One inbox that cuts through noise across communication sources — triage, drafts, and approvals so nothing important is missed.
-**Current focus:** Phase 02.1.1 — Triage Digest Context & Rendering Fixes
+**Current focus:** Phase 02.1.2 — Triage Topic Agent Context & ByteRover In-Container
 
 ## Current Position
 
-Phase: 02.1.1 (Triage Digest Context & Rendering Fixes) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
-Last activity: 2026-04-23
+Phase: 02.1.2 (Triage Topic Agent Context — Plan C gap closure) — READY TO EXECUTE
+Plan: 0 of 2
+Status: Plans written; implementation not started
+Last activity: 2026-04-28
 
-Progress: [████████░░] 78%
+Progress: [██████░░░░] 73%
 
 ## Accumulated Context
 
@@ -51,17 +51,18 @@ Progress: [████████░░] 78%
 - [Phase 02-1-1-triage-digest-context-fixes]: Option A over Option B: extended review scripts to emit BodyB64 rather than adding a new bodies-snapshot file
 - [Phase 02-1-1-triage-digest-context-fixes]: Single-line base64 transport for body keeps summary parser untouched and handles any email content safely
 - [Phase 02-1-1-triage-digest-context-fixes]: Blockquote cap is 4000 body chars with '... (truncated)' marker; header-line affordance sits at top of '## Needs attention' when non-empty
+- **[Phase 02.1.2, opened 2026-04-28]:** Live UAT showed Bella could not ground on the digest markdown already posted to the Telegram triage Forum topic (“paste or forward”). Session traces also showed failing `byterover` / `brv providers connect byterover` / empty `memory_search` in-agent. Decision: Phase 02.1.2 — inject canonical `triage-digest-latest.md` into Bella’s inbound Telegram context when routing matches the configured triage Forum thread; separately wire ByteRover auth in-container under `openclaw-ops` compose secrets + verify connect from `/data/.openclaw/workspace`.
 
 ### Blockers/Concerns
 
 - `openclaw-ops/vps/patches/0001-telegram-triage-auto-route.patch` was not reliably staying installed across compose recreates. Rather than fix, we are removing the patch entirely under Phase 02.1.
 - Triage items classified as `DraftNeeded: no` for external senders with "Response Required"-style subjects — **addressed in 02.1-02 source tree, now fixed on VPS as of 2026-04-23 mirror deploy**.
-- Hospitable digest rendering + agent drafting context — captured in Phase 02.1.1, ready to execute.
+- **Plan C conversational triage blocked until Phase 02.1.2:** digest renders correctly but inbound agent lacked digest snapshot visibility; awaiting 02.1.2 execution.
 
 ## Session Continuity
 
-**Last session:** 2026-04-23T05:15:13.731Z
-**Last Date:** 2026-04-23T05:15:13.731Z
-**Stopped At:** Completed 02-1-1-02-PLAN.md
+**Last session:** 2026-04-28T00:00:00.000Z
+**Last Date:** 2026-04-28T00:00:00.000Z
+**Stopped At:** Opened Phase 02.1.2 planning artifacts (CONTEXT + 2 PLAN files)
 **Resume File:** None
-**Resume hint:** next session, run `/gsd-execute-phase 02.1.1` (or say "start phase 02.1.1")
+**Resume hint:** `/gsd-execute-phase 02.1.1` is complete except deferred UAT items; `/gsd-execute-phase 02.1.2` executes next gap closure — or say "start phase 02.1.2"
