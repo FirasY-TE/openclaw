@@ -172,8 +172,8 @@ Plans:
 
 **UAT:**
 
-- [ ] Digest posted to Telegram; operator sends “summary” in same topic → Bella lists items consistent with `/data/openclaw-gws/output/triage-digest-latest.md` without requesting paste
-- [ ] Operator invokes a draft for a visible needs_reply item (natural phrasing such as drafting for Fred or the rental inquiry) → draft references inline blockquote facts (address, dates) without “I don’t see the email”
+- [x] Digest posted to Telegram; operator sends "summary" in same topic → Bella listed Hospitable AC-thread items (Judy + Jaclyn) consistent with `/data/openclaw-gws/output/triage-digest-latest.md` without requesting paste (UAT 2026-04-28)
+- [x] Operator invokes a draft for a visible needs_attention item ("draft a reply to Judy") → Bella drafted from inline body + agreed to send the reply via `tdr send-now` for the Modern Forms thread on operator request (UAT 2026-04-28)
 - [x] Inside `openclaw-ridl-openclaw-1`, `brv providers` shows `Google Gemini (google)` connected and `brv search "triage digest"` returns real hits from the on-disk context tree (verified Apr 2026; cloud login intentionally skipped — optional)
 
 **Plans:** 2 plans
@@ -320,18 +320,57 @@ Plans:
 
 ## Status
 
-| Phase  | Status                                  | Notes                                                                                            |
-| ------ | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| 1      | Completed                               | Foundation — topic routing live                                                                  |
-| 2      | Partial                                 | Plans 02-01 and 02-02 completed; 02-03 superseded by 02.1                                        |
-| 02.1   | Implementation done; UAT surfaced gaps  | Plan C pivot — simplify triage draft surface; live UAT blocked by 02.1.1 gaps                    |
-| 02.1.1 | Complete                                | Plan 01 (dict-leak fix) + Plan 02 (inline body + header-line) shipped + verified live            |
-| 02.1.2 | Implemented (deploy + live UAT pending) | Core inject + ops template/README; VPS patch/brv login after secrets — see phase VERIFICATION.md |
-| 02.2   | Not started                             | Version alignment across local, VPS, and Mac GUI                                                 |
-| 3      | Not started                             | Prior Beeper design work available                                                               |
-| 4      | Not started                             | API investigation needed early                                                                   |
-| 5      | Not started                             | After Phases 2-4 stabilize                                                                       |
+| Phase  | Status                                 | Notes                                                                                                                                                                                 |
+| ------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1      | Completed                              | Foundation — topic routing live                                                                                                                                                       |
+| 2      | Partial                                | Plans 02-01 and 02-02 completed; 02-03 superseded by 02.1                                                                                                                             |
+| 02.1   | Implementation done; UAT surfaced gaps | Plan C pivot — simplify triage draft surface; live UAT blocked by 02.1.1 gaps                                                                                                         |
+| 02.1.1 | Complete                               | Plan 01 (dict-leak fix) + Plan 02 (inline body + header-line) shipped + verified live                                                                                                 |
+| 02.1.2 | Complete                               | Live UAT 2026-04-28 PASSED — Bella grounded on `triage-digest-latest.md`; summary, draft (Judy), ignore (Jaclyn) all worked; operator-driven send-now of Modern Forms reply succeeded |
+| 02.2   | Not started                            | Version alignment across local, VPS, and Mac GUI                                                                                                                                      |
+| 3      | Not started                            | Prior Beeper design work available                                                                                                                                                    |
+| 4      | Not started                            | API investigation needed early                                                                                                                                                        |
+| 5      | Not started                            | After Phases 2-4 stabilize                                                                                                                                                            |
 
 ---
 
-_Last updated: 2026-04-29 (Phase 02.1.2 code + docs; human UAT deferred to deploy/config)_
+_Last updated: 2026-04-28 (Phase 02.1.2 closed — live UAT passed; three follow-ups captured in Backlog 999.x)_
+
+---
+
+## Backlog
+
+Future-phase parking lot. Promote with `/gsd-review-backlog` when ready.
+
+### Phase 999.1: Triage digest grouping and presentation (BACKLOG)
+
+**Goal:** Improve digest readability by grouping messages logically (per-source section headings such as "Hospitable" / "Email"; per-thread sub-grouping such as "Judy ↔ Jaclyn (res …)"; consider table or chart format for the at-a-glance view).
+**Why:** During 02.1.2 UAT (2026-04-28), Bella correctly grounded on the digest but the rendered list mixed messages from the same Hospitable thread without a clear sub-heading or thread roll-up. Clean grouping makes the operator scan + Bella's `summary` output dramatically faster.
+**Requirements:** TBD (touchpoints: `scripts/deploy/lib/triage_digest_build.py`, mirrored to `~/openclaw-ops/vps/scripts/`; potentially the inbound `triageDigestSnapshot` header copy).
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (promote with `/gsd-review-backlog` when ready)
+
+### Phase 999.2: Triage agent reply fidelity — full body + inline images (BACKLOG)
+
+**Goal:** When the operator asks for the "full text" or "body" of an email, Bella returns the complete content rather than a `…`-truncated paraphrase, and surfaces inline images (or at least image references / OCR-able alt text) when present.
+**Why:** During 02.1.2 UAT (2026-04-28), the Modern Forms email body came back partial with `...` even though Bella could summarize it; an inline image in the same email was not represented. Truncation is currently capped at 4000 body chars in the digest blockquote — sufficient for summary, insufficient for full-body asks.
+**Requirements:** TBD (touchpoints: digest body cap in `triage_digest_build.py`; possible second-tier "full body" snapshot fetch path, or on-demand expansion via existing `tdr` token; image extraction/representation strategy).
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (promote with `/gsd-review-backlog` when ready)
+
+### Phase 999.3: Triage inclusion — broaden inbox-of-today, exclude promotions/newsletters (BACKLOG)
+
+**Goal:** Expand the digest's email inclusion rules so it shows everything received today (excluding promotions/newsletters, or at least demoting them under a separate sub-heading) rather than gating on the strict "Response Required" / `needs_reply` heuristic.
+**Why:** During 02.1.2 UAT (2026-04-28), the Modern Forms support email was a real reply-needed item but didn't surface in the digest until the operator asked Bella directly — i.e., the response-required filter is too strict and missing genuine email today. Goal is "all today's email, with promos demoted/grouped, not silently dropped."
+**Requirements:** TBD (touchpoints: classifier in `gws-personal` / review scripts; promo/newsletter heuristic; digest section ordering; mirror to `~/openclaw-ops/vps/scripts/`).
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (promote with `/gsd-review-backlog` when ready)

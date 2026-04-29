@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready_to_plan
-stopped_at: Phase 02.1.2 implementation committed; human UAT + VPS patch deploy outstanding
-last_updated: "2026-04-29T00:00:00.000Z"
-last_activity: 2026-04-29
+stopped_at: Phase 02.1.2 closed (live UAT passed); 02.2 next, plus Backlog 999.1–999.3 captured
+last_updated: "2026-04-28T00:00:00.000Z"
+last_activity: 2026-04-28
 progress:
   total_phases: 9
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 11
-  completed_plans: 8
-  percent: 73
+  completed_plans: 10
+  percent: 82
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-08)
 
 **Core value:** One inbox that cuts through noise across communication sources — triage, drafts, and approvals so nothing important is missed.
-**Current focus:** Phase 02.2 or human UAT closure for 02.1.2 — gateway is back on `OpenClaw 2026.4.12 (1c0672b)` with triage digest env vars wired; ByteRover/`brv` verified live (Gemini provider, real `brv search` hits). Remaining: live Telegram UAT in the triage Forum topic.
+**Current focus:** Phase 02.1.2 closed — live UAT passed 2026-04-28 (Bella grounds on triage digest, drafts, and even sent a real reply via `tdr send-now`). Three quality-of-life follow-ups captured as Backlog 999.1/999.2/999.3. Next active: Phase 02.2 (version alignment).
 
 ## Current Position
 
-Phase: 02.1.2 — implementation done in repo; staged roll (patch/VPS/key/UAT still open)
+Phase: 02.1.2 — **passed** (verified live)
 Plan: 2 of 2 (summaries recorded)
-Status: See `02-1-2-VERIFICATION.md` — `human_needed` for live Telegram + brv connect after secrets
-Last activity: 2026-04-29
+Status: See `02-1-2-VERIFICATION.md` — UAT table all passed; backlog follow-ups in `ROADMAP.md` Backlog section
+Last activity: 2026-04-28
 
-Progress: [██████░░░░] 73%
+Progress: [████████░░] 82%
 
 ## Accumulated Context
 
@@ -57,12 +57,13 @@ Progress: [██████░░░░] 73%
 
 - `openclaw-ops/vps/patches/0001-telegram-triage-auto-route.patch` was not reliably staying installed across compose recreates. Rather than fix, we are removing the patch entirely under Phase 02.1.
 - Triage items classified as `DraftNeeded: no` for external senders with "Response Required"-style subjects — **addressed in 02.1-02 source tree, now fixed on VPS as of 2026-04-23 mirror deploy**.
-- **Plan C conversational triage blocked until Phase 02.1.2:** digest renders correctly but inbound agent lacked digest snapshot visibility; awaiting 02.1.2 execution.
+- **Plan C conversational triage:** unblocked 2026-04-28 — digest snapshot now reaches the inbound agent for the configured triage Forum topic; live UAT passed.
+- **Backlog 999.1 (digest grouping/presentation), 999.2 (full-body fidelity + inline images), 999.3 (broaden inclusion vs strict response-required):** captured from 02.1.2 UAT findings; not blocking.
 
 ## Session Continuity
 
 **Last session:** 2026-04-28T00:00:00.000Z
 **Last Date:** 2026-04-28T00:00:00.000Z
-**Stopped At:** Opened Phase 02.1.2 planning artifacts (CONTEXT + 2 PLAN files)
+**Stopped At:** Closed Phase 02.1.2 (live UAT passed); captured backlog 999.1–999.3
 **Resume File:** None
-**Resume hint:** `/gsd-execute-phase 02.1.1` is complete except deferred UAT items; `/gsd-execute-phase 02.1.2` executes next gap closure — or say "start phase 02.1.2"
+**Resume hint:** `/gsd-discuss-phase 02.2` to start version alignment, or `/gsd-review-backlog` to promote 999.1/999.2/999.3 when ready.

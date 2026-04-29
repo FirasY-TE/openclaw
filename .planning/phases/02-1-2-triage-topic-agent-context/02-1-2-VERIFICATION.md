@@ -1,7 +1,7 @@
 ---
 phase: "02.1.2"
 title: "Triage Topic Agent Context + ByteRover In-Container"
-status: human_needed
+status: passed
 updated: "2026-04-28"
 ---
 
@@ -13,11 +13,22 @@ updated: "2026-04-28"
 | TRIAGE-02.1.2-3 | Upstream-first TypeScript in `openclaw/`         | **Passed** — implementation in-repo; VPS ships via patched image per existing ops workflow (`vps/README.md`).                                                                                                                                                                                                                                                                                                                                                                                                  |
 | TRIAGE-02.1.2-2 | ByteRover / `brv` working in-container           | **Passed (live)** — `brv providers` reports `Google Gemini (google)` (current, API Key); `brv search "triage digest"` returns real hits from the on-disk context tree as `node`. Earlier `brv providers connect byterover` runbook line was incorrect (that targets ByteRover's hosted cloud LLM, which this deployment doesn't use); `BYTEROVER_API_KEY` cloud login is **optional** for push/pull sync only. Runbook + `.env.example` corrected in `openclaw-ops` (vps/README.md, vps/compose/.env.example). |
 
-## Human verification pending
+## Human verification — 2026-04-28
 
-| Item                                      | Notes                                                                                                                                                                                                            |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Telegram UAT (`ROADMAP.md` lines 175–176) | Send "summary" / draft request in the triage Forum topic and confirm Bella cites grounded digest items without asking for a paste. Gateway is back on `OpenClaw 2026.4.12 (1c0672b)` with digest env vars wired. |
+| Step                                                     | Operator input                                                                                                                                                                        | Bella behavior                                                                                                                                                  | Verdict                                                       |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| 1. Triage digest posted to Telegram triage topic         | `summary`                                                                                                                                                                             | Listed today's Hospitable AC-thread items (Judy ↔ Jaclyn on res `2b46e722-…`) consistent with `triage-digest-latest.md`; no paste/forward request               | **Passed**                                                    |
+| 2. Draft request for a `Needs attention` item            | `Draft a reply to Judy`                                                                                                                                                               | Drafted Judy-facing reply grounded in inline body (settled in, AC issue resolved, positive note); no "I don't see the email"                                    | **Passed**                                                    |
+| 3. Ignore an item                                        | `Ignore Jaclyn's message`                                                                                                                                                             | Acknowledged ignore (`Got it, I'll ignore Jaclyn's message`)                                                                                                    | **Passed**                                                    |
+| 4. Free-form follow-up (Modern Forms thread, off-digest) | "Did I receive an email from Modern Forms today? … Can you provide the body? … Can you reply with this … Can you improve the message? … Are you able to reply and send this message?" | Located the Modern Forms support thread, returned the body, drafted twice with operator edits, then **executed `tdr send-now` and confirmed `Done, I sent it`** | **Passed (extra) — full draft → send loop worked end-to-end** |
+
+## Follow-ups captured (not blockers)
+
+The UAT also surfaced three improvement areas, captured as backlog (see `.planning/ROADMAP.md` Backlog section):
+
+- **Phase 999.1** — Better digest grouping/presentation (per-source headings, per-thread roll-up, possible table view).
+- **Phase 999.2** — Reply fidelity: full body returned without `…` truncation when operator asks; inline image representation.
+- **Phase 999.3** — Broaden digest inclusion: all email received today (excluding/demoting promos + newsletters) instead of strict `Response Required` filter only.
 
 ## Commands run (executor)
 
@@ -29,4 +40,4 @@ pnpm exec vitest run src/telegram/triage-topic-digest-snapshot.test.ts src/teleg
 
 ## Gaps
 
-- None for core implementation. ByteRover memory tooling verified live (Google Gemini provider + smoke search). Only outstanding item is the human Telegram UAT in the triage Forum topic.
+- None. Phase passed live UAT 2026-04-28; three quality-of-life follow-ups captured in Backlog (999.1 / 999.2 / 999.3).
