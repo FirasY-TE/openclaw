@@ -185,6 +185,39 @@ Plans:
 
 ---
 
+### Phase 02.1.3: Telegram digest-snapshot upstream port + ops patch pipeline
+
+**Goal:** Port the Phase 02.1.2 digest-snapshot TypeScript into upstream's restructured `extensions/telegram/src/` layout and stand up the `openclaw-ops/vps/patches/` + `build-patched-openclaw.sh` pipeline so the running VPS binary actually contains the snapshot-injection runtime.
+
+**Why:** During 02.1.2 close-out (2026-04-28) we discovered the deployed binary (`v2026.4.12 / 1c0672b`) contains **none** of our 02.1.2 runtime code — upstream restructured Telegram into a workspace package and our `src/telegram/` files were silently ignored at build time. UAT passed only because today's digest is small enough (~1 KB) to fit in one Telegram message and Bella reads it from topic conversation history. `send_with_topic_fallback` doesn't chunk; at >4096 chars Telegram rejects the message and the digest **fails to send entirely** — a near-certain outcome once Backlog 999.3 (broaden inclusion) lands. The 32 KB file-snapshot path is the safety net for that.
+
+**Requirements:**
+
+- Snapshot module + tests rewritten for upstream `openclaw/plugin-sdk/*` imports.
+- Digest-injection hook applied to upstream `extensions/telegram/src/bot-message-context.session.ts` (`buildTelegramInboundContextPayload`).
+- Config schema additions re-located in upstream's split structure.
+- `vps/patches/0001-telegram-triage-digest-snapshot.patch` against pinned `vps/.openclaw-version=1c0672b`.
+- `vps/build-patched-openclaw.sh` (clone upstream at SHA → apply patches → `pnpm build && npm pack`).
+- Optional `vps/deploy.sh --with-core` for tarball install.
+- Live UAT with a forced large digest (>4096 chars) confirms Bella still grounds via the file path.
+
+**Success criteria:**
+
+- `grep -rl OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_CHAT_ID /data/.npm-global/lib/node_modules/openclaw/dist/` matches at least one runtime `.js` after deploy.
+- A >4096-char digest fixture produces (a) a chat message that may be summarized/truncated and (b) a Bella reply that still cites items the chat message could not include.
+- `openclaw-ops` self-contained: clone, run `build-patched-openclaw.sh` on a clean machine, get the same tarball.
+
+**UAT:**
+
+- [ ] Force-large digest fixture posted to topic 9; Bella's `summary` reply cites items only present in the file (not the truncated chat message).
+- [ ] `vps/.openclaw-version` SHA bump-and-rebuild loop is repeatable from a fresh clone.
+
+**Plans:** TBD (run `/gsd-plan-phase 02.1.3` to create them).
+
+See `.planning/phases/02-1-3-telegram-digest-snapshot-upstream-port/02-1-3-CONTEXT.md`.
+
+---
+
 ### Phase 02.2: Version Alignment + Upgrade Stabilization (Local + VPS + Mac GUI)
 
 **Goal:** Align OpenClaw versions across local CLI/runtime, VPS runtime, and Mac GUI app after the 02.1 simplification rollout, with explicit health gates and rollback checkpoints.
@@ -327,6 +360,7 @@ Plans:
 | 02.1   | Implementation done; UAT surfaced gaps | Plan C pivot — simplify triage draft surface; live UAT blocked by 02.1.1 gaps                                                                                                         |
 | 02.1.1 | Complete                               | Plan 01 (dict-leak fix) + Plan 02 (inline body + header-line) shipped + verified live                                                                                                 |
 | 02.1.2 | Complete                               | Live UAT 2026-04-28 PASSED — Bella grounded on `triage-digest-latest.md`; summary, draft (Judy), ignore (Jaclyn) all worked; operator-driven send-now of Modern Forms reply succeeded |
+| 02.1.3 | Planned                                | Port 02.1.2 TS into upstream `extensions/telegram` + ship `vps/patches/` + `build-patched-openclaw.sh`; safety net before Backlog 999.3 broadens digest                               |
 | 02.2   | Not started                            | Version alignment across local, VPS, and Mac GUI                                                                                                                                      |
 | 3      | Not started                            | Prior Beeper design work available                                                                                                                                                    |
 | 4      | Not started                            | API investigation needed early                                                                                                                                                        |
@@ -334,7 +368,7 @@ Plans:
 
 ---
 
-_Last updated: 2026-04-28 (Phase 02.1.2 closed — live UAT passed; three follow-ups captured in Backlog 999.x)_
+_Last updated: 2026-04-28 (Phase 02.1.2 closed — live UAT passed; Phase 02.1.3 planned for upstream-port + patch pipeline; three follow-ups captured in Backlog 999.x)_
 
 ---
 

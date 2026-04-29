@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready_to_plan
-stopped_at: Phase 02.1.2 closed (live UAT passed); 02.2 next, plus Backlog 999.1–999.3 captured
+stopped_at: Phase 02.1.2 closed (live UAT passed); Phase 02.1.3 planned (upstream-port + patch pipeline); 02.2 next, plus Backlog 999.1–999.3 captured
 last_updated: "2026-04-28T00:00:00.000Z"
 last_activity: 2026-04-28
 progress:
-  total_phases: 9
+  total_phases: 10
   completed_phases: 4
   total_plans: 11
   completed_plans: 10
-  percent: 82
+  percent: 75
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-08)
 
 **Core value:** One inbox that cuts through noise across communication sources — triage, drafts, and approvals so nothing important is missed.
-**Current focus:** Phase 02.1.2 closed — live UAT passed 2026-04-28 (Bella grounds on triage digest, drafts, and even sent a real reply via `tdr send-now`). Three quality-of-life follow-ups captured as Backlog 999.1/999.2/999.3. Next active: Phase 02.2 (version alignment).
+**Current focus:** Phase 02.1.2 closed — live UAT passed 2026-04-28. Discovered during close-out that the deployed binary on VPS is unmodified upstream `v2026.4.12 (1c0672b)` — UAT works because today's digest fits in one Telegram message and Bella reads it from topic conversation history. **Phase 02.1.3 planned** to port the 02.1.2 TS into upstream's `extensions/telegram` structure and ship the patch pipeline (`vps/patches/` + `build-patched-openclaw.sh`) — safety net before Backlog 999.3 broadens digest beyond 4096 chars. Three quality-of-life follow-ups captured as Backlog 999.1/999.2/999.3. Next active: 02.1.3, then 02.2 (version alignment).
 
 ## Current Position
 
@@ -64,6 +64,6 @@ Progress: [████████░░] 82%
 
 **Last session:** 2026-04-28T00:00:00.000Z
 **Last Date:** 2026-04-28T00:00:00.000Z
-**Stopped At:** Closed Phase 02.1.2 (live UAT passed); captured backlog 999.1–999.3
-**Resume File:** None
-**Resume hint:** `/gsd-discuss-phase 02.2` to start version alignment, or `/gsd-review-backlog` to promote 999.1/999.2/999.3 when ready.
+**Stopped At:** Closed Phase 02.1.2 (live UAT passed); opened Phase 02.1.3 (upstream-port + patch pipeline); pinned `vps/.openclaw-version=1c0672b` in openclaw-ops; captured backlog 999.1–999.3
+**Resume File:** `.planning/phases/02-1-3-telegram-digest-snapshot-upstream-port/02-1-3-CONTEXT.md`
+**Resume hint:** `/gsd-plan-phase 02.1.3` to plan the upstream-port + ops patch pipeline (recommended before Backlog 999.3); `/gsd-discuss-phase 02.2` to start version alignment instead; `/gsd-review-backlog` to promote 999.1/999.2/999.3.
