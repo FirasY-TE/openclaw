@@ -161,20 +161,20 @@ Plans:
 
 - Configurable Telegram Forum `(chatId, topic thread id)` predicate that injects bounded digest Markdown into Bella’s inbound envelope (explicit match; no heuristic)
 - Oversized snapshot truncation + clear labeling so the operator message + digest snapshot boundaries are obvious to the model
-- VPS: `brv providers connect byterover` succeeds from `/data/.openclaw/workspace` after secrets are wired in compose (`openclaw-ops` template only; never commit real tokens)
+- VPS: `brv` works locally inside `openclaw-ridl-openclaw-1` (provider already on Google Gemini, `brv search` returns real results); ByteRover _cloud_ account is **optional** and only needed for push/pull sync
 - Core Telegram changes follow upstream PR in `openclaw/` plus `openclaw-ops/vps/` patch/deploy for production container (per VPS rules)
 
 **Success criteria:**
 
 - `summary`, `draft <name>`, `ignore <name>` exercised in triage topic **without paste** — Bella cites grounded digest lines/items
-- No repeated session-log loop of “ByteRover Provider requires authentication” on connect during normal reply turns after plan 02 completes
+- No agent-side `brv search`/memory failures during normal reply turns; the misleading `brv providers connect byterover` runbook step is removed (cloud login is optional, not required for memory)
 - `pnpm build` + targeted Telegram tests pass for injection logic
 
 **UAT:**
 
 - [ ] Digest posted to Telegram; operator sends “summary” in same topic → Bella lists items consistent with `/data/openclaw-gws/output/triage-digest-latest.md` without requesting paste
 - [ ] Operator invokes a draft for a visible needs_reply item (natural phrasing such as drafting for Fred or the rental inquiry) → draft references inline blockquote facts (address, dates) without “I don’t see the email”
-- [ ] Inside container after deploy: `/data/.brv-cli/bin/brv providers connect byterover` returns success when run from documented cwd
+- [x] Inside `openclaw-ridl-openclaw-1`, `brv providers` shows `Google Gemini (google)` connected and `brv search "triage digest"` returns real hits from the on-disk context tree (verified Apr 2026; cloud login intentionally skipped — optional)
 
 **Plans:** 2 plans
 

@@ -21,7 +21,7 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-08)
 
 **Core value:** One inbox that cuts through noise across communication sources — triage, drafts, and approvals so nothing important is missed.
-**Current focus:** Phase 02.2 or human UAT closure for 02.1.2 (deploy patched gateway + topic config + `BYTEROVER_API_KEY`)
+**Current focus:** Phase 02.2 or human UAT closure for 02.1.2 — gateway is back on `OpenClaw 2026.4.12 (1c0672b)` with triage digest env vars wired; ByteRover/`brv` verified live (Gemini provider, real `brv search` hits). Remaining: live Telegram UAT in the triage Forum topic.
 
 ## Current Position
 
