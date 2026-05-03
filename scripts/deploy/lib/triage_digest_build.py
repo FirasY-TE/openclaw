@@ -575,10 +575,11 @@ def main() -> int:
     fixed_now = _parse_now_iso(args.now_iso) if args.now_iso else None
     meta, md, by_token = run_build(base, now=fixed_now)
 
+    # POSIX text convention + avoid zsh '%' when cat'ing without final newline
+    md_out = md if md.endswith("\n") else f"{md}\n"
+
     if args.stdout_md_only:
-        sys.stdout.write(md)
-        if not md.endswith("\n"):
-            sys.stdout.write("\n")
+        sys.stdout.write(md_out)
         return 0
 
     out_dir = base / "output"
@@ -586,7 +587,7 @@ def main() -> int:
     json_path = out_dir / "triage-digest-latest.json"
     md_path = out_dir / "triage-digest-latest.md"
     json_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
-    md_path.write_text(md, encoding="utf-8")
+    md_path.write_text(md_out, encoding="utf-8")
 
     state_payload = {
         "version": 1,
@@ -594,9 +595,7 @@ def main() -> int:
         "byToken": by_token,
     }
     _write_json_atomic(_draft_state_path(base), state_payload)
-    sys.stdout.write(md)
-    if not md.endswith("\n"):
-        sys.stdout.write("\n")
+    sys.stdout.write(md_out)
     return 0
 
 
