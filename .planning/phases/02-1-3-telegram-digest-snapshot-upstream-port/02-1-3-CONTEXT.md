@@ -1,7 +1,7 @@
 ---
 phase: "02.1.3"
 title: "Port digest-snapshot TS to upstream extensions/telegram + ship patch pipeline"
-status: planned
+status: implemented
 opened: "2026-04-28"
 ---
 

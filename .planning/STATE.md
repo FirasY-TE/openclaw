@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready_to_plan
-stopped_at: Phase 02.1.2 closed (live UAT passed); Phase 02.1.3 planned (upstream-port + patch pipeline); 02.2 next, plus Backlog 999.1–999.3 captured
-last_updated: "2026-04-28T00:00:00.000Z"
-last_activity: 2026-04-28
+stopped_at: Phase 02.1.3 patches + SUMMARY + verification recorded in-repo; operators deploy patched tarball via ~/openclaw-ops/vps (--with-core); 02.2 next, Backlog 999.x
+last_updated: "2026-05-03T00:00:00.000Z"
+last_activity: 2026-05-03
 progress:
   total_phases: 10
   completed_phases: 4
@@ -25,10 +25,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-08)
 
 ## Current Position
 
-Phase: 02.1.2 — **passed** (verified live)
-Plan: 2 of 2 (summaries recorded)
-Status: See `02-1-2-VERIFICATION.md` — UAT table all passed; backlog follow-ups in `ROADMAP.md` Backlog section
-Last activity: 2026-04-28
+Phase: 02.1.3 — **implementation complete** (automated gates in `02-1-3-VERIFICATION.md`; VPS live grep + >4096 UAT awaiting operator)
+Plan: 02.1.3 plans 01–02 summarized (`02-1-3-01-SUMMARY.md`, `02-1-3-02-SUMMARY.md`)
+Status: `openclaw-ops/vps/` now ships `build-patched-openclaw.sh`, tarball patch apply, `deploy.sh --with-core --restart`; next: operator deploy + ROADMAP UAT bullets
+Last activity: 2026-05-03
 
 Progress: [████████░░] 82%
 
@@ -64,6 +64,6 @@ Progress: [████████░░] 82%
 
 **Last session:** 2026-04-28T00:00:00.000Z
 **Last Date:** 2026-04-28T00:00:00.000Z
-**Stopped At:** Closed Phase 02.1.2 (live UAT passed); opened Phase 02.1.3 (upstream-port + patch pipeline); pinned `vps/.openclaw-version=1c0672b` in openclaw-ops; captured backlog 999.1–999.3
+**Stopped At:** Phase 02.1.3 artifact delivery — patch + build script + deploy path in `~/openclaw-ops`; live VPS install not run from orchestrator shell
 **Resume File:** `.planning/phases/02-1-3-telegram-digest-snapshot-upstream-port/02-1-3-CONTEXT.md`
-**Resume hint:** `/gsd-plan-phase 02.1.3` to plan the upstream-port + ops patch pipeline (recommended before Backlog 999.3); `/gsd-discuss-phase 02.2` to start version alignment instead; `/gsd-review-backlog` to promote 999.1/999.2/999.3.
+**Resume hint:** Run `~/openclaw-ops/vps/build-patched-openclaw.sh` → `OPENCLAW_PACK_TGZ=... ./deploy.sh --with-core --restart` → README grep smoke / large digest UAT; then `/gsd-discuss-phase 02.2` or `/gsd-review-backlog` for 999.x.

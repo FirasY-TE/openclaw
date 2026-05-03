@@ -216,8 +216,8 @@ Plans:
 
 Plans:
 
-- [ ] `02-1-3-01-PLAN.md` — Port snapshot module + hook + Vitest under `extensions/telegram/src/` at SHA `1c0672b`; export checked `0001-*.patch`
-- [ ] `02-1-3-02-PLAN.md` — Ops: `vps/.openclaw-version`, `vps/patches/0001-telegram-triage-digest-snapshot.patch`, `build-patched-openclaw.sh`, `deploy.sh --with-core`, README grep/UAT
+- [x] `02-1-3-01-PLAN.md` — Port snapshot module + hook + Vitest under `extensions/telegram/src/` at SHA `1c0672b`; export checked `0001-*.patch`
+- [x] `02-1-3-02-PLAN.md` — Ops: `vps/.openclaw-version`, `vps/patches/0001-telegram-triage-digest-snapshot.patch`, `build-patched-openclaw.sh`, `deploy.sh --with-core`, README grep/UAT
 
 Artifacts: `.planning/phases/02-1-3-telegram-digest-snapshot-upstream-port/02-1-3-RESEARCH.md`, `02-1-3-VALIDATION.md`.
 
@@ -367,7 +367,7 @@ See `.planning/phases/02-1-3-telegram-digest-snapshot-upstream-port/02-1-3-CONTE
 | 02.1   | Implementation done; UAT surfaced gaps | Plan C pivot — simplify triage draft surface; live UAT blocked by 02.1.1 gaps                                                                                                         |
 | 02.1.1 | Complete                               | Plan 01 (dict-leak fix) + Plan 02 (inline body + header-line) shipped + verified live                                                                                                 |
 | 02.1.2 | Complete                               | Live UAT 2026-04-28 PASSED — Bella grounded on `triage-digest-latest.md`; summary, draft (Judy), ignore (Jaclyn) all worked; operator-driven send-now of Modern Forms reply succeeded |
-| 02.1.3 | Planned                                | Port 02.1.2 TS into upstream `extensions/telegram` + ship `vps/patches/` + `build-patched-openclaw.sh`; safety net before Backlog 999.3 broadens digest                               |
+| 02.1.3 | Complete (live UAT checklist pending)  | Patched tarball pipeline in `openclaw-ops` + extension digest runtime in `dist` bundle; operators still run VPS deploy + grep smoke + forced >4096 digest UAT (`ROADMAP` items above) |
 | 02.2   | Not started                            | Version alignment across local, VPS, and Mac GUI                                                                                                                                      |
 | 3      | Not started                            | Prior Beeper design work available                                                                                                                                                    |
 | 4      | Not started                            | API investigation needed early                                                                                                                                                        |
@@ -375,7 +375,7 @@ See `.planning/phases/02-1-3-telegram-digest-snapshot-upstream-port/02-1-3-CONTE
 
 ---
 
-_Last updated: 2026-04-28 (Phase 02.1.2 closed — live UAT passed; Phase 02.1.3 planned for upstream-port + patch pipeline; three follow-ups captured in Backlog 999.x)_
+_Last updated: 2026-05-03 (Phase 02.1.3 automated execution complete — `openclaw-ops/vps/` patch pipeline landed; VPS live grep + forced large-digest UAT still operator-driven)_
 
 ---
 
