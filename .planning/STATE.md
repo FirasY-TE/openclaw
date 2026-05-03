@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
+milestone: v2026.4.12
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: Phase 02.1.3 patches + SUMMARY + verification recorded in-repo; operators deploy patched tarball via ~/openclaw-ops/vps (--with-core); 02.2 next, Backlog 999.x
-last_updated: "2026-05-03T00:00:00.000Z"
+status: "`openclaw-ops/vps/` now ships `build-patched-openclaw.sh`, tarball patch apply, `deploy.sh --with-core --restart`; next: operator deploy + ROADMAP UAT bullets"
+stopped_at: Phase 02.2 context gathered
+last_updated: "2026-05-03T22:12:09.335Z"
 last_activity: 2026-05-03
 progress:
-  total_phases: 10
-  completed_phases: 4
-  total_plans: 11
-  completed_plans: 10
-  percent: 75
+  total_phases: 13
+  completed_phases: 5
+  total_plans: 13
+  completed_plans: 12
+  percent: 82
 ---
 
 # Project State
@@ -62,8 +62,8 @@ Progress: [████████░░] 82%
 
 ## Session Continuity
 
-**Last session:** 2026-04-28T00:00:00.000Z
-**Last Date:** 2026-04-28T00:00:00.000Z
-**Stopped At:** Phase 02.1.3 artifact delivery — patch + build script + deploy path in `~/openclaw-ops`; live VPS install not run from orchestrator shell
-**Resume File:** `.planning/phases/02-1-3-telegram-digest-snapshot-upstream-port/02-1-3-CONTEXT.md`
+**Last session:** 2026-05-03T22:12:09.324Z
+**Last Date:** 2026-05-03T22:12:09.324Z
+**Stopped At:** Phase 02.2 context gathered
+**Resume File:** .planning/phases/02-2-version-alignment-upgrade-stabilization-local-vps-mac-gui/02.2-CONTEXT.md
 **Resume hint:** Run `~/openclaw-ops/vps/build-patched-openclaw.sh` → `OPENCLAW_PACK_TGZ=... ./deploy.sh --with-core --restart` → README grep smoke / large digest UAT; then `/gsd-discuss-phase 02.2` or `/gsd-review-backlog` for 999.x.
