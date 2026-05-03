@@ -212,7 +212,14 @@ Plans:
 - [ ] Force-large digest fixture posted to topic 9; Bella's `summary` reply cites items only present in the file (not the truncated chat message).
 - [ ] `vps/.openclaw-version` SHA bump-and-rebuild loop is repeatable from a fresh clone.
 
-**Plans:** TBD (run `/gsd-plan-phase 02.1.3` to create them).
+**Plans:** 2 plans — wave 1 (**openclaw** patch authoring at `1c0672b` in `/tmp` clone) then wave 2 (**openclaw-ops** pipeline)
+
+Plans:
+
+- [ ] `02-1-3-01-PLAN.md` — Port snapshot module + hook + Vitest under `extensions/telegram/src/` at SHA `1c0672b`; export checked `0001-*.patch`
+- [ ] `02-1-3-02-PLAN.md` — Ops: `vps/.openclaw-version`, `vps/patches/0001-telegram-triage-digest-snapshot.patch`, `build-patched-openclaw.sh`, `deploy.sh --with-core`, README grep/UAT
+
+Artifacts: `.planning/phases/02-1-3-telegram-digest-snapshot-upstream-port/02-1-3-RESEARCH.md`, `02-1-3-VALIDATION.md`.
 
 See `.planning/phases/02-1-3-telegram-digest-snapshot-upstream-port/02-1-3-CONTEXT.md`.
 
