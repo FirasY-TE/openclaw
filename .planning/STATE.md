@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2026.4.12
 milestone_name: milestone
-status: "`openclaw-ops/vps/` now ships `build-patched-openclaw.sh`, tarball patch apply, `deploy.sh --with-core --restart`; next: operator deploy + ROADMAP UAT bullets"
-stopped_at: Phase 02.2 planned (plans 01-04)
-last_updated: "2026-05-03T22:21:59.807Z"
-last_activity: 2026-05-03
+status: Phase 02.2 executed — operator Telegram triage UAT pending
+stopped_at: Plans 01–04 SUMMARYs written; two VERIFICATION UAT rows unchecked
+last_updated: "2026-05-03T23:45:00.000Z"
+last_activity: 2026-05-03 — Phase 02.2 deploy + docs
 progress:
   total_phases: 13
   completed_phases: 5
@@ -21,13 +21,13 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-08)
 
 **Core value:** One inbox that cuts through noise across communication sources — triage, drafts, and approvals so nothing important is missed.
-**Current focus:** Phase 02.1.2 closed — live UAT passed 2026-04-28. Discovered during close-out that the deployed binary on VPS is unmodified upstream `v2026.4.12 (1c0672b)` — UAT works because today's digest fits in one Telegram message and Bella reads it from topic conversation history. **Phase 02.1.3 planned** to port the 02.1.2 TS into upstream's `extensions/telegram` structure and ship the patch pipeline (`vps/patches/` + `build-patched-openclaw.sh`) — safety net before Backlog 999.3 broadens digest beyond 4096 chars. Three quality-of-life follow-ups captured as Backlog 999.1/999.2/999.3. Next active: 02.1.3, then 02.2 (version alignment).
+**Current focus:** Phase 02.2 — version-alignment-upgrade-stabilization-local-vps-mac-gui
 
 ## Current Position
 
-Phase: 02.1.3 — **implementation complete** (automated gates in `02-1-3-VERIFICATION.md`; VPS live grep + >4096 UAT awaiting operator)
-Plan: 02.1.3 plans 01–02 summarized (`02-1-3-01-SUMMARY.md`, `02-1-3-02-SUMMARY.md`)
-Status: `openclaw-ops/vps/` now ships `build-patched-openclaw.sh`, tarball patch apply, `deploy.sh --with-core --restart`; next: operator deploy + ROADMAP UAT bullets
+Phase: 02.2 (version-alignment-upgrade-stabilization-local-vps-mac-gui) — artifacts complete; **manual UAT** (digest + `tdr send-now`) still open
+Plan: 04 documented (`02.2-04-SUMMARY.md`)
+Status: Local `openclaw@2026.4.12`; VPS patched tarball redeployed (`116ce68…`); Mac app **2026.4.11** (Sparkle drift vs npm/VPS per D-09/D-10). VPS probe exit 0; decommission greps clean (see `02.2-VERIFICATION.md`).
 Last activity: 2026-05-03
 
 Progress: [████████░░] 82%
@@ -62,8 +62,7 @@ Progress: [████████░░] 82%
 
 ## Session Continuity
 
-**Last session:** 2026-05-03T22:21:59.799Z
-**Last Date:** 2026-05-03T22:21:59.799Z
-**Stopped At:** Phase 02.2 planned (plans 01-04)
-**Resume File:** .planning/phases/02-2-version-alignment-upgrade-stabilization-local-vps-mac-gui/02.2-01-PLAN.md
-**Resume hint:** Run `~/openclaw-ops/vps/build-patched-openclaw.sh` → `OPENCLAW_PACK_TGZ=... ./deploy.sh --with-core --restart` → README grep smoke / large digest UAT; then `/gsd-discuss-phase 02.2` or `/gsd-review-backlog` for 999.x.
+**Last session:** 2026-05-03 (Phase 02.2 execution)
+**Stopped At:** Manual Telegram triage UAT — digest tokens + `/bash tdr send-now <token>` (`02.2-VERIFICATION.md` unchecked rows)
+**Resume File:** `.planning/phases/02-2-version-alignment-upgrade-stabilization-local-vps-mac-gui/02.2-VERIFICATION.md`
+**Resume hint:** Run digest (`openclaw-gws-triage-digest` or schedule); confirm inline tokens / no legacy callbacks; test `tdr send-now` on a safe token; check boxes in `02.2-VERIFICATION.md` → `/gsd-verify-work 02.2` or close phase when satisfied. Optional: bump Mac app via Sparkle to **2026.4.12** to remove drift from VPS/npm.
