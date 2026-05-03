@@ -209,8 +209,8 @@ Plans:
 
 **UAT:**
 
-- [ ] Force-large digest fixture posted to topic 9; Bella's `summary` reply cites items only present in the file (not the truncated chat message).
-- [ ] `vps/.openclaw-version` SHA bump-and-rebuild loop is repeatable from a fresh clone.
+- [x] Force-large digest fixture posted to topic 9; Bella's `summary` reply cites items only present in the file (not the truncated chat message). _(2026-05-03 — `UAT_SENTINEL_TAIL_20260503` in reply.)_
+- [x] `vps/.openclaw-version` SHA bump-and-rebuild loop is repeatable from a fresh clone. _(Verified: `build-patched-openclaw.sh` + `deploy.sh --with-core`; grep smoke on `dist`.)_
 
 **Plans:** 2 plans — wave 1 (**openclaw** patch authoring at `1c0672b` in `/tmp` clone) then wave 2 (**openclaw-ops** pipeline)
 
@@ -367,7 +367,7 @@ See `.planning/phases/02-1-3-telegram-digest-snapshot-upstream-port/02-1-3-CONTE
 | 02.1   | Implementation done; UAT surfaced gaps | Plan C pivot — simplify triage draft surface; live UAT blocked by 02.1.1 gaps                                                                                                         |
 | 02.1.1 | Complete                               | Plan 01 (dict-leak fix) + Plan 02 (inline body + header-line) shipped + verified live                                                                                                 |
 | 02.1.2 | Complete                               | Live UAT 2026-04-28 PASSED — Bella grounded on `triage-digest-latest.md`; summary, draft (Judy), ignore (Jaclyn) all worked; operator-driven send-now of Modern Forms reply succeeded |
-| 02.1.3 | Complete (live UAT checklist pending)  | Patched tarball pipeline in `openclaw-ops` + extension digest runtime in `dist` bundle; operators still run VPS deploy + grep smoke + forced >4096 digest UAT (`ROADMAP` items above) |
+| 02.1.3 | Complete                               | Patched digest snapshot + ops pipeline; UAT 2026-05-03 (tail sentinel); deploy + grep verified                                                                                        |
 | 02.2   | Not started                            | Version alignment across local, VPS, and Mac GUI                                                                                                                                      |
 | 3      | Not started                            | Prior Beeper design work available                                                                                                                                                    |
 | 4      | Not started                            | API investigation needed early                                                                                                                                                        |
@@ -375,7 +375,7 @@ See `.planning/phases/02-1-3-telegram-digest-snapshot-upstream-port/02-1-3-CONTE
 
 ---
 
-_Last updated: 2026-05-03 (Phase 02.1.3 automated execution complete — `openclaw-ops/vps/` patch pipeline landed; VPS live grep + forced large-digest UAT still operator-driven)_
+_Last updated: 2026-05-03 (Phase 02.1.3 closed — UAT done; `gsd-tools` matches `02.1.3` ↔ `02-1-3-*` dirs)_
 
 ---
 
