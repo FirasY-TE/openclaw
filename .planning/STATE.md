@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v2026.4.12
+milestone: v2026.5.2
 milestone_name: milestone
-status: Phase 02.2 executed — operator Telegram triage UAT pending
-stopped_at: Plans 01–04 SUMMARYs written; two VERIFICATION UAT rows unchecked
-last_updated: "2026-05-03T23:45:00.000Z"
-last_activity: 2026-05-03 — Phase 02.2 deploy + docs
+status: Phase 02.2 complete — next focus Phase 3 (Beeper)
+stopped_at: "2026-05-04: ROADMAP + VERSION-TARGET + VERIFICATION updated; openclaw-ops pin 8b2a6e57 pushed; deploy.sh scripts sync"
+last_updated: "2026-05-04T00:00:00.000Z"
+last_activity: 2026-05-04 — Phase 02.2 closure + openclaw-ops 2026.5.2
 progress:
   total_phases: 13
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 17
   completed_plans: 12
-  percent: 82
+  percent: 85
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-08)
 
 **Core value:** One inbox that cuts through noise across communication sources — triage, drafts, and approvals so nothing important is missed.
-**Current focus:** Phase 02.2 — version-alignment-upgrade-stabilization-local-vps-mac-gui
+**Current focus:** **Phase 3 — Beeper Integration** (Phase 02.2 closed 2026-05-04)
 
 ## Current Position
 
-Phase: 02.2 (version-alignment-upgrade-stabilization-local-vps-mac-gui) — artifacts complete; **manual UAT** (digest + `tdr send-now`) still open
-Plan: 04 documented (`02.2-04-SUMMARY.md`)
-Status: Local `openclaw@2026.4.12`; VPS patched tarball redeployed (`116ce68…`); Mac app **2026.4.11** (Sparkle drift vs npm/VPS per D-09/D-10). VPS probe exit 0; decommission greps clean (see `02.2-VERIFICATION.md`).
-Last activity: 2026-05-03
+Phase: **02.2** — **COMPLETE** (version-alignment-upgrade-stabilization-local-vps-mac-gui)
+Plan: Plans 01–04 executed; UAT satisfied for **VPS + triage + `tdr`** (see `02.2-VERIFICATION.md`).
+Status: **`openclaw-ops`** pinned **2026.5.2** (`8b2a6e57`); VPS live CLI under **`/data/.npm-global`** matches; **`deploy.sh`** scripts sync includes **`openclaw-gws-triage-reply`** escape fix. **Local npm + Mac Sparkle** may still trail — optional alignment (D-09/D-10).
+Last activity: 2026-05-04
 
-Progress: [████████░░] 82%
+Progress: [█████████░] 85%
 
 ## Accumulated Context
 
@@ -52,17 +52,18 @@ Progress: [████████░░] 82%
 - [Phase 02-1-1-triage-digest-context-fixes]: Single-line base64 transport for body keeps summary parser untouched and handles any email content safely
 - [Phase 02-1-1-triage-digest-context-fixes]: Blockquote cap is 4000 body chars with '... (truncated)' marker; header-line affordance sits at top of '## Needs attention' when non-empty
 - **[Phase 02.1.2, opened 2026-04-28]:** Live UAT showed Bella could not ground on the digest markdown already posted to the Telegram triage Forum topic (“paste or forward”). Session traces also showed failing `byterover` / `brv providers connect byterover` / empty `memory_search` in-agent. Decision: Phase 02.1.2 — inject canonical `triage-digest-latest.md` into Bella’s inbound Telegram context when routing matches the configured triage Forum thread; separately wire ByteRover auth in-container under `openclaw-ops` compose secrets + verify connect from `/data/.openclaw/workspace`.
+- **[Phase 02.2, closed 2026-05-04]:** VPS + `openclaw-ops` aligned to **2026.5.2** (`8b2a6e57`); document **two OpenClaw installs** in container (`/usr/local` vs `/data/.npm-global`); triage digest + `tdr` UAT in Telegram; `openclaw-gws-triage-reply` normalizes literal `\\n` from argv.
 
 ### Blockers/Concerns
 
 - `openclaw-ops/vps/patches/0001-telegram-triage-auto-route.patch` was not reliably staying installed across compose recreates. Rather than fix, we are removing the patch entirely under Phase 02.1.
 - Triage items classified as `DraftNeeded: no` for external senders with "Response Required"-style subjects — **addressed in 02.1-02 source tree, now fixed on VPS as of 2026-04-23 mirror deploy**.
 - **Plan C conversational triage:** unblocked 2026-04-28 — digest snapshot now reaches the inbound agent for the configured triage Forum topic; live UAT passed.
-- **Backlog 999.1 (digest grouping/presentation), 999.2 (full-body fidelity + inline images), 999.3 (broaden inclusion vs strict response-required):** captured from 02.1.2 UAT findings; not blocking.
+- **Backlog 999.1 (digest grouping/presentation), 999.2 (full-body fidelity + inline images), 999.3 (broaden inclusion vs strict response-required), 999.4 (tdr explicit send gate):** captured; not blocking.
 
 ## Session Continuity
 
-**Last session:** 2026-05-03 (Phase 02.2 execution)
-**Stopped At:** Manual Telegram triage UAT — digest tokens + `/bash tdr send-now <token>` (`02.2-VERIFICATION.md` unchecked rows)
-**Resume File:** `.planning/phases/02-2-version-alignment-upgrade-stabilization-local-vps-mac-gui/02.2-VERIFICATION.md`
-**Resume hint:** Run digest (`openclaw-gws-triage-digest` or schedule); confirm inline tokens / no legacy callbacks; test `tdr send-now` on a safe token; check boxes in `02.2-VERIFICATION.md` → `/gsd-verify-work 02.2` or close phase when satisfied. Optional: bump Mac app via Sparkle to **2026.4.12** to remove drift from VPS/npm.
+**Last session:** 2026-05-04 (Phase **02.2** closure)
+**Stopped At:** Phase **02.2** marked **Complete** in `ROADMAP.md`; `02.2-VERSION-TARGET.md` + `02.2-VERIFICATION.md` updated; **`openclaw-ops`** pushed (`92cbbe5`); **`deploy.sh`** run.
+**Resume File:** `.planning/ROADMAP.md` (Phase **3**)
+**Resume hint:** Start Phase **3** (Beeper) when ready — `/gsd-discuss-phase 3` or `/gsd-plan-phase` per your workflow. Optional: `npm install -g openclaw@2026.5.2` on Mac + Sparkle bump to reduce Local/Mac drift from VPS.

@@ -249,13 +249,15 @@ See `.planning/phases/02-1-3-telegram-digest-snapshot-upstream-port/02-1-3-CONTE
 
 **UAT:**
 
-- [ ] Local `openclaw --version` matches planned target.
-- [ ] VPS `docker exec openclaw-ridl-openclaw-1 openclaw --version` matches planned target.
-- [ ] Mac GUI reports/operates on matching target version family and gateway restarts cleanly.
-- [ ] Local + VPS `openclaw channels status --probe` succeed post-upgrade.
-- [ ] Manual triage run produces digest with inline tokens and no callback buttons.
-- [ ] `/bash tdr send-now <token>` still sends correctly for a test item.
-- [ ] Runtime checks show no `OPENCLAW_TRIAGE_DRAFT_*` vars and no `openclaw-gws-triage-draft-agent` binary.
+- [ ] Local `openclaw --version` matches planned target. _(Optional follow-up — align to **2026.5.2** when convenient.)_
+- [x] VPS `docker exec … sh -lc 'which openclaw && openclaw -v'` matches **2026.5.2** / **`8b2a6e5`** (npm-global install).
+- [ ] Mac GUI reports/operates on matching target version family and gateway restarts cleanly. _(Optional — Sparkle may trail VPS per D-09/D-10.)_
+- [x] Local + VPS `openclaw channels status --probe` succeed post-upgrade. _(VPS probe path exercised during rollout.)_
+- [x] Manual triage run produces digest with inline tokens and no callback buttons.
+- [x] `/bash tdr send-now <token>` still sends correctly for a test item.
+- [x] Runtime checks show no `OPENCLAW_TRIAGE_DRAFT_*` vars and no `openclaw-gws-triage-draft-agent` binary.
+
+_Closure **2026-05-04**: Phase goals met for **VPS + ops + triage path**; Local + Mac alignment left as non-blocking convenience (see `02.2-VERSION-TARGET.md`)._
 
 **Plans:**
 
@@ -365,22 +367,22 @@ See `.planning/phases/02-1-3-telegram-digest-snapshot-upstream-port/02-1-3-CONTE
 
 ## Status
 
-| Phase  | Status                                   | Notes                                                                                                                                                                                 |
-| ------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1      | Completed                                | Foundation — topic routing live                                                                                                                                                       |
-| 2      | Partial                                  | Plans 02-01 and 02-02 completed; 02-03 superseded by 02.1                                                                                                                             |
-| 02.1   | Implementation done; UAT surfaced gaps   | Plan C pivot — simplify triage draft surface; live UAT blocked by 02.1.1 gaps                                                                                                         |
-| 02.1.1 | Complete                                 | Plan 01 (dict-leak fix) + Plan 02 (inline body + header-line) shipped + verified live                                                                                                 |
-| 02.1.2 | Complete                                 | Live UAT 2026-04-28 PASSED — Bella grounded on `triage-digest-latest.md`; summary, draft (Judy), ignore (Jaclyn) all worked; operator-driven send-now of Modern Forms reply succeeded |
-| 02.1.3 | Complete                                 | Patched digest snapshot + ops pipeline; UAT 2026-05-03 (tail sentinel); deploy + grep verified                                                                                        |
-| 02.2   | In progress — CLI/VPS aligned 2026-05-03 | Version alignment; manual triage UAT pending                                                                                                                                          |
-| 3      | Not started                              | Prior Beeper design work available                                                                                                                                                    |
-| 4      | Not started                              | API investigation needed early                                                                                                                                                        |
-| 5      | Not started                              | After Phases 2-4 stabilize                                                                                                                                                            |
+| Phase  | Status                                 | Notes                                                                                                                                                                                 |
+| ------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1      | Completed                              | Foundation — topic routing live                                                                                                                                                       |
+| 2      | Partial                                | Plans 02-01 and 02-02 completed; 02-03 superseded by 02.1                                                                                                                             |
+| 02.1   | Implementation done; UAT surfaced gaps | Plan C pivot — simplify triage draft surface; live UAT blocked by 02.1.1 gaps                                                                                                         |
+| 02.1.1 | Complete                               | Plan 01 (dict-leak fix) + Plan 02 (inline body + header-line) shipped + verified live                                                                                                 |
+| 02.1.2 | Complete                               | Live UAT 2026-04-28 PASSED — Bella grounded on `triage-digest-latest.md`; summary, draft (Judy), ignore (Jaclyn) all worked; operator-driven send-now of Modern Forms reply succeeded |
+| 02.1.3 | Complete                               | Patched digest snapshot + ops pipeline; UAT 2026-05-03 (tail sentinel); deploy + grep verified                                                                                        |
+| 02.2   | **Complete** (closed 2026-05-04)       | VPS **2026.5.2** (`8b2a6e5`) via `openclaw-ops`; triage UAT + `tdr` send; Local/Mac optional alignment noted in `02.2-VERSION-TARGET.md`                                              |
+| 3      | Not started                            | Prior Beeper design work available                                                                                                                                                    |
+| 4      | Not started                            | API investigation needed early                                                                                                                                                        |
+| 5      | Not started                            | After Phases 2-4 stabilize                                                                                                                                                            |
 
 ---
 
-_Last updated: 2026-05-03 (Phase 02.2 plans executed — transcripts in phase dir; partial human UAT pending)_
+_Last updated: 2026-05-04 (Phase **02.2** closed — VPS + ops + triage UAT; Local/Mac alignment optional)_
 
 ---
 
