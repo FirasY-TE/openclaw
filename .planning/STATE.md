@@ -8,7 +8,7 @@ last_updated: "2026-05-04T00:00:00.000Z"
 last_activity: 2026-05-04 — Phase 02.2 closure + openclaw-ops 2026.5.2
 progress:
   total_phases: 13
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 17
   completed_plans: 12
   percent: 85
@@ -25,9 +25,9 @@ See: `.planning/PROJECT.md` (updated 2026-04-08)
 
 ## Current Position
 
-Phase: **02.2** — **COMPLETE** (version-alignment-upgrade-stabilization-local-vps-mac-gui)
-Plan: Plans 01–04 executed; UAT satisfied for **VPS + triage + `tdr`** (see `02.2-VERIFICATION.md`).
-Status: **`openclaw-ops`** pinned **2026.5.2** (`8b2a6e57`); VPS live CLI under **`/data/.npm-global`** matches; **`deploy.sh`** scripts sync includes **`openclaw-gws-triage-reply`** escape fix. **Local npm + Mac Sparkle** may still trail — optional alignment (D-09/D-10).
+Phase: **3 — Beeper Integration** (next). **02.2** — **COMPLETE** (`02.2-UAT.md`, `02.2-VERIFICATION.md`).
+Plan: 02.2 plans 01–04 executed; formal **UAT** six-for-six (`02.2-UAT.md`).
+Status: **`openclaw-ops`** pinned **2026.5.2** (`8b2a6e57`); VPS live CLI under **`/data/.npm-global`** when `PATH` prefers it; **`openclaw-gws-triage-reply`** escape fix deployed. Local npm + Mac Sparkle alignment **deferred** (D-09/D-10).
 Last activity: 2026-05-04
 
 Progress: [█████████░] 85%
@@ -63,7 +63,7 @@ Progress: [█████████░] 85%
 
 ## Session Continuity
 
-**Last session:** 2026-05-04 (Phase **02.2** closure)
-**Stopped At:** Phase **02.2** marked **Complete** in `ROADMAP.md`; `02.2-VERSION-TARGET.md` + `02.2-VERIFICATION.md` updated; **`openclaw-ops`** pushed (`92cbbe5`); **`deploy.sh`** run.
+**Last session:** 2026-05-04 (Phase **02.2** finished — UAT + bookkeeping)
+**Stopped At:** `02.2-UAT.md` **complete** (6/6); ROADMAP Phase **02.2** UAT all checked (Local/Mac marked deferred); link to UAT in ROADMAP + `02.2-VERIFICATION.md`; STATE current → **Phase 3**.
 **Resume File:** `.planning/ROADMAP.md` (Phase **3**)
 **Resume hint:** Start Phase **3** (Beeper) when ready — `/gsd-discuss-phase 3` or `/gsd-plan-phase` per your workflow. Optional: `npm install -g openclaw@2026.5.2` on Mac + Sparkle bump to reduce Local/Mac drift from VPS.

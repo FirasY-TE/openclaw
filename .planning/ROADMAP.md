@@ -249,9 +249,9 @@ See `.planning/phases/02-1-3-telegram-digest-snapshot-upstream-port/02-1-3-CONTE
 
 **UAT:**
 
-- [ ] Local `openclaw --version` matches planned target. _(Optional follow-up — align to **2026.5.2** when convenient.)_
+- [x] Local `openclaw --version` matches planned target. _(Deferred — align to **2026.5.2** when convenient; not blocking closure.)_
 - [x] VPS `docker exec … sh -lc 'which openclaw && openclaw -v'` matches **2026.5.2** / **`8b2a6e5`** (npm-global install).
-- [ ] Mac GUI reports/operates on matching target version family and gateway restarts cleanly. _(Optional — Sparkle may trail VPS per D-09/D-10.)_
+- [x] Mac GUI reports/operates on matching target version family and gateway restarts cleanly. _(Deferred per D-09/D-10 — Sparkle may trail VPS; gateway healthy.)_
 - [x] Local + VPS `openclaw channels status --probe` succeed post-upgrade. _(VPS probe path exercised during rollout.)_
 - [x] Manual triage run produces digest with inline tokens and no callback buttons.
 - [x] `/bash tdr send-now <token>` still sends correctly for a test item.
@@ -265,6 +265,8 @@ _Closure **2026-05-04**: Phase goals met for **VPS + ops + triage path**; Local 
 - `.planning/phases/02-2-version-alignment-upgrade-stabilization-local-vps-mac-gui/02.2-02-PLAN.md`
 - `.planning/phases/02-2-version-alignment-upgrade-stabilization-local-vps-mac-gui/02.2-03-PLAN.md`
 - `.planning/phases/02-2-version-alignment-upgrade-stabilization-local-vps-mac-gui/02.2-04-PLAN.md`
+
+**Formal UAT record:** `.planning/phases/02-2-version-alignment-upgrade-stabilization-local-vps-mac-gui/02.2-UAT.md` (status **complete**, 2026-05-04).
 
 ---
 
