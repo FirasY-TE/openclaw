@@ -15,7 +15,7 @@ It imports Telegram config types from `openclaw/plugin-sdk/config-runtime` — n
 
 A separate line of experimentation in some forks targeted **`src/telegram/bot-message-context.session.ts`**. That implementation does **not** ship in the Telegram extension bundle consumed by builds that compile only/along-side the **`extensions/telegram`** tree for release packaging — producing a **silent gap** where VPS `grep` finds no snapshot symbols in `dist/`.
 
-**Operational trigger:** Telegram **4096** character ceiling on a single Bot API message. Digest posting uses topic send without guaranteed chunking; once digest length exceeds the cap (**Backlog 999.3 broadens inclusion**), delivery fails outright unless the agent still receives **`triage-digest-latest.md`** via the **bounded file-read injection** path (**32 768 chars** tail-truncated with explicit marker).
+**Operational trigger:** Telegram **4096** character ceiling on a single Bot API message. Digest posting uses topic send without guaranteed chunking; once digest length exceeds the cap (**Phase 02.3 broadens inclusion**), delivery fails outright unless the agent still receives **`triage-digest-latest.md`** via the **bounded file-read injection** path (**32 768 chars** tail-truncated with explicit marker).
 
 ## Target architecture at `1c0672b`
 

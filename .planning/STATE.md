@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2026.5.2
 milestone_name: milestone
-status: Phase 02.2 complete — next focus Phase 3 (Beeper)
-stopped_at: "2026-05-04: ROADMAP + VERSION-TARGET + VERIFICATION updated; openclaw-ops pin 8b2a6e57 pushed; deploy.sh scripts sync"
-last_updated: "2026-05-04T00:00:00.000Z"
-last_activity: 2026-05-04 — Phase 02.2 closure + openclaw-ops 2026.5.2
+status: Phase 02.2 complete — next triage increments 02.3→02.4→02.5, then Phase 3 (Beeper)
+stopped_at: "2026-05-03: backlog review — promoted 999.3/999.2/999.1 → Phases 02.3/02.4/02.5; ROADMAP + STATE + cross-ref docs"
+last_updated: "2026-05-03T00:00:00.000Z"
+last_activity: 2026-05-03 — Promote triage backlog items to 02.3–02.5
 progress:
-  total_phases: 13
+  total_phases: 16
   completed_phases: 7
   total_plans: 17
   completed_plans: 12
-  percent: 85
+  percent: 44
 ---
 
 # Project State
@@ -21,11 +21,11 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-08)
 
 **Core value:** One inbox that cuts through noise across communication sources — triage, drafts, and approvals so nothing important is missed.
-**Current focus:** **Phase 3 — Beeper Integration** (Phase 02.2 closed 2026-05-04)
+**Current focus:** **Phases 02.3–02.5** (promoted from backlog 2026-05-03), then **Phase 3 — Beeper** (Phase 02.2 closed 2026-05-04)
 
 ## Current Position
 
-Phase: **3 — Beeper Integration** (next). **02.2** — **COMPLETE** (`02.2-UAT.md`, `02.2-VERIFICATION.md`).
+Phase: **02.3 — Triage inclusion** (next in sequence), then **02.4**, **02.5**, then **3 — Beeper**. **02.2** — **COMPLETE** (`02.2-UAT.md`, `02.2-VERIFICATION.md`).
 Plan: 02.2 plans 01–04 executed; formal **UAT** six-for-six (`02.2-UAT.md`).
 Status: **`openclaw-ops`** pinned **2026.5.2** (`8b2a6e57`); VPS live CLI under **`/data/.npm-global`** when `PATH` prefers it; **`openclaw-gws-triage-reply`** escape fix deployed. Local npm + Mac Sparkle alignment **deferred** (D-09/D-10).
 Last activity: 2026-05-04
@@ -59,11 +59,11 @@ Progress: [█████████░] 85%
 - `openclaw-ops/vps/patches/0001-telegram-triage-auto-route.patch` was not reliably staying installed across compose recreates. Rather than fix, we are removing the patch entirely under Phase 02.1.
 - Triage items classified as `DraftNeeded: no` for external senders with "Response Required"-style subjects — **addressed in 02.1-02 source tree, now fixed on VPS as of 2026-04-23 mirror deploy**.
 - **Plan C conversational triage:** unblocked 2026-04-28 — digest snapshot now reaches the inbound agent for the configured triage Forum topic; live UAT passed.
-- **Backlog 999.1 (digest grouping/presentation), 999.2 (full-body fidelity + inline images), 999.3 (broaden inclusion vs strict response-required), 999.4 (tdr explicit send gate):** captured; not blocking.
+- **Backlog 999.4 (`tdr` explicit send confirmation gate):** captured; not blocking. **999.1–999.3** promoted to active **Phases 02.5, 02.4, 02.3** respectively (2026-05-03).
 
 ## Session Continuity
 
 **Last session:** 2026-05-04 (Phase **02.2** finished — UAT + bookkeeping)
 **Stopped At:** `02.2-UAT.md` **complete** (6/6); ROADMAP Phase **02.2** UAT all checked (Local/Mac marked deferred); link to UAT in ROADMAP + `02.2-VERIFICATION.md`; STATE current → **Phase 3**.
-**Resume File:** `.planning/ROADMAP.md` (Phase **3**)
-**Resume hint:** Start Phase **3** (Beeper) when ready — `/gsd-discuss-phase 3` or `/gsd-plan-phase` per your workflow. Optional: `npm install -g openclaw@2026.5.2` on Mac + Sparkle bump to reduce Local/Mac drift from VPS.
+**Resume File:** `.planning/ROADMAP.md` (Phase **02.3**)
+**Resume hint:** Plan/execute **02.3** (inclusion) → **02.4** (fidelity) → **02.5** (grouping), then **Phase 3** (Beeper). Optional: `npm install -g openclaw@2026.5.2` on Mac + Sparkle bump to reduce Local/Mac drift from VPS.

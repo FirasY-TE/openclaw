@@ -16,7 +16,7 @@ During UAT cleanup on **2026-04-28** we discovered:
 3. When we rebuilt the openclaw tarball from a fresh upstream `v2026.4.12` worktree (`/tmp/oc-2026`), the build picked up upstream's `extensions/telegram/` files and **silently ignored** our `src/telegram/` additions.
 4. The deployed binary on the VPS therefore contains **no digest-injection runtime code** — confirmed by grepping for `OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_CHAT_ID`, `DEFAULT_TRIAGE_DIGEST_SNAPSHOT_PATH`, `readTriageDigestSnapshot`, `Canonical triage digest snapshot`, `triage-digest-latest.md` — none present in `/data/.npm-global/lib/node_modules/openclaw/`.
 
-UAT still passed because today's digest is **1079 chars** (well under 4096), so Bella reads it as a normal Telegram message in the topic conversation history. **This breaks as soon as Backlog 999.3 broadens inclusion** — `send_with_topic_fallback` posts the whole digest as a single message and offers no chunking; at >4096 chars Telegram returns `message is too long` and the whole digest **fails to send entirely** (verified by reading `vps/scripts/lib/telegram-topic-routing.sh`).
+UAT still passed because today's digest is **1079 chars** (well under 4096), so Bella reads it as a normal Telegram message in the topic conversation history. **This breaks as soon as Phase 02.3 broadens inclusion** — `send_with_topic_fallback` posts the whole digest as a single message and offers no chunking; at >4096 chars Telegram returns `message is too long` and the whole digest **fails to send entirely** (verified by reading `vps/scripts/lib/telegram-topic-routing.sh`).
 
 ## Goal
 
@@ -34,12 +34,12 @@ Port the 02.1.2 TS code so the deployed binary actually contains the digest-snap
 
 ## Out of scope
 
-- Changes to `triage_digest_build.py` (digest content / inclusion / formatting). Those live in Backlog 999.1/999.2/999.3.
+- Changes to `triage_digest_build.py` (digest content / inclusion / formatting). Those live in **Phases 02.5 / 02.4 / 02.3** (formerly backlog 999.1–999.3).
 - Upstream PR to `openclaw/openclaw`. The env-fallback hack (`OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_CHAT_ID/_TOPIC_ID`) is specifically a workaround for the channel-plugin JSON Schema rejecting custom topic-config keys — that should be addressed before any upstream PR.
 
 ## When to land
 
-Before Backlog **999.3** ships (broaden inclusion). Earlier is fine — this purely adds a safety net and changes no observable behavior at current digest sizes.
+Before **Phase 02.3** ships (broaden inclusion). Earlier is fine — this purely adds a safety net and changes no observable behavior at current digest sizes.
 
 ## Reference artifacts
 

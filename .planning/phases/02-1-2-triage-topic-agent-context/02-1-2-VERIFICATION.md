@@ -26,9 +26,9 @@ updated: "2026-04-28"
 
 The UAT also surfaced three improvement areas, captured as backlog (see `.planning/ROADMAP.md` Backlog section):
 
-- **Phase 999.1** — Better digest grouping/presentation (per-source headings, per-thread roll-up, possible table view).
-- **Phase 999.2** — Reply fidelity: full body returned without `…` truncation when operator asks; inline image representation.
-- **Phase 999.3** — Broaden digest inclusion: all email received today (excluding/demoting promos + newsletters) instead of strict `Response Required` filter only.
+- **Phase 02.5** (was 999.1) — Better digest grouping/presentation (per-source headings, per-thread roll-up, possible table view).
+- **Phase 02.4** (was 999.2) — Reply fidelity: full body returned without `…` truncation when operator asks; inline image representation.
+- **Phase 02.3** (was 999.3) — Broaden digest inclusion: all email received today (excluding/demoting promos + newsletters) instead of strict `Response Required` filter only.
 
 ## Commands run (executor)
 
@@ -40,4 +40,4 @@ pnpm exec vitest run src/telegram/triage-topic-digest-snapshot.test.ts src/teleg
 
 ## Gaps
 
-- None. Phase passed live UAT 2026-04-28; three quality-of-life follow-ups captured in Backlog (999.1 / 999.2 / 999.3).
+- None. Phase passed live UAT 2026-04-28; three quality-of-life follow-ups promoted to **Phases 02.3 / 02.4 / 02.5** (2026-05-03).
