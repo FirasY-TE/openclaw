@@ -420,3 +420,17 @@ Plans:
 Plans:
 
 - [ ] TBD (promote with `/gsd-review-backlog` when ready)
+
+### Phase 999.4: Triage `tdr` explicit send confirmation gate (BACKLOG)
+
+**Goal:** Require an unambiguous operator approval step before any Gmail send (`tdr send` / `send-now`), so conversational phrasing like “reply that …” cannot be interpreted as send consent.
+
+**Why:** During 2026-05-03 live UAT, Bella sent immediately after a draft request; the runbook’s “explicit operator intent” line is soft enough that models skip the preview/approve beat. Optional hardening: remove `send-now`, split `draft` → `send`, and tighten `triage-draft-runbook.md`.
+
+**Requirements:** TBD (touchpoints: `openclaw-gws-triage-reply`, `scripts/deploy/prompts/triage-draft-runbook.md`, operator UX in Telegram; mirror to `~/openclaw-ops/vps/scripts/`).
+
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (promote with `/gsd-review-backlog` when ready)

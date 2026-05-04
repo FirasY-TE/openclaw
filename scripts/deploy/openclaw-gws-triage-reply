@@ -8,7 +8,8 @@ State file: /data/openclaw-gws/state/triage-draft-tokens.json
 
 Subcommands:
   draft <token> [body...]    Create a Gmail draft reply (users.drafts.create). If body text is
-                             provided, use it; otherwise use a placeholder.
+                             provided, use it; otherwise use a placeholder. Literal \\n / \\t / \\r
+                             from argv are expanded to real whitespace before MIME encoding.
   replace <token> [body...]  Bump draftTextVersion; optional new plain-text body rebuilds draft.
   send <token>               Send draft via users.drafts.send (requires draftId from prior draft).
 
@@ -80,6 +81,20 @@ def header_map(payload: dict[str, Any]) -> dict[str, str]:
     return headers
 
 
+def normalize_cli_body_text(body: str) -> str:
+    """Expand C-style escapes when argv/shell left them as literal backslash sequences.
+
+    Agents often pass the two-character sequence backslash + n instead of a real newline;
+    EmailMessage would otherwise send those characters literally in the MIME body.
+    """
+    if "\\" not in body:
+        return body
+    out = body.replace("\\r\\n", "\n")
+    out = out.replace("\\n", "\n")
+    out = out.replace("\\t", "\t")
+    return out.replace("\\r", "\r")
+
+
 def build_reply_raw(
     orig: dict[str, Any],
     body_text: str,
@@ -126,6 +141,8 @@ def cmd_draft(token: str, body_parts: list[str] | None = None) -> None:
         body = (entry.get("lastDraftText") or "").strip()
     if not body:
         body = "(Draft reply — please replace with your message)"
+    else:
+        body = normalize_cli_body_text(body)
     raw = build_reply_raw(orig, body, thread_id)
     msg_obj: dict[str, Any] = {"raw": raw}
     if thread_id:
@@ -157,7 +174,7 @@ def cmd_replace(token: str, body_parts: list[str]) -> None:
     if not entry:
         raise SystemExit("unknown token")
     account = entry["account"]
-    body = " ".join(body_parts).strip()
+    body = normalize_cli_body_text(" ".join(body_parts).strip())
     entry["draftTextVersion"] = int(entry.get("draftTextVersion") or 0) + 1
     if body:
         mid = entry["gmailMessageId"]
