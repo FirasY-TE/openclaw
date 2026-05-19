@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v2026.5.2
+milestone: v2026.4.12
 milestone_name: milestone
-status: Phase 02.2 complete — next triage increments 02.3→02.4→02.5, then Phase 3 (Beeper)
-stopped_at: "2026-05-03: backlog review — promoted 999.3/999.2/999.1 → Phases 02.3/02.4/02.5; ROADMAP + STATE + cross-ref docs"
-last_updated: "2026-05-03T00:00:00.000Z"
-last_activity: 2026-05-03 — Promote triage backlog items to 02.3–02.5
+status: **`openclaw-ops`** pinned **2026.5.2** (`8b2a6e57`); VPS live CLI under **`/data/.npm-global`** when `PATH` prefers it; **`openclaw-gws-triage-reply`** escape fix deployed. Local npm + Mac Sparkle alignment **deferred** (D-09/D-10).
+stopped_at: Phase 02.3 context gathered
+last_updated: "2026-05-19T02:22:31.658Z"
+last_activity: 2026-05-04
 progress:
-  total_phases: 16
-  completed_phases: 7
+  total_phases: 15
+  completed_phases: 6
   total_plans: 17
-  completed_plans: 12
-  percent: 44
+  completed_plans: 16
+  percent: 85
 ---
 
 # Project State
@@ -63,7 +63,7 @@ Progress: [█████████░] 85%
 
 ## Session Continuity
 
-**Last session:** 2026-05-04 (Phase **02.2** finished — UAT + bookkeeping)
-**Stopped At:** `02.2-UAT.md` **complete** (6/6); ROADMAP Phase **02.2** UAT all checked (Local/Mac marked deferred); link to UAT in ROADMAP + `02.2-VERIFICATION.md`; STATE current → **Phase 3**.
-**Resume File:** `.planning/ROADMAP.md` (Phase **02.3**)
+**Last session:** 2026-05-19T02:22:31.647Z
+**Stopped At:** Phase 02.3 context gathered
+**Resume File:** .planning/phases/02-3-triage-inclusion-broaden-inbox-today-excluding-promotions/02.3-CONTEXT.md
 **Resume hint:** Plan/execute **02.3** (inclusion) → **02.4** (fidelity) → **02.5** (grouping), then **Phase 3** (Beeper). Optional: `npm install -g openclaw@2026.5.2` on Mac + Sparkle bump to reduce Local/Mac drift from VPS.
