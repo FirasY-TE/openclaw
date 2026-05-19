@@ -278,15 +278,16 @@ _Closure **2026-05-04**: Phase goals met for **VPS + ops + triage path**; Local 
 
 **Why:** During 02.1.2 UAT (2026-04-28), the Modern Forms support email was a real reply-needed item but didn't surface in the digest until the operator asked Bella directly — i.e., the response-required filter is too strict and missing genuine email today. Goal is "all today's email, with promos demoted/grouped, not silently dropped."
 
-**Requirements:** TBD (touchpoints: classifier in `gws-personal` / review scripts; promo/newsletter heuristic; digest section ordering; mirror to `~/openclaw-ops/vps/scripts/`).
+**Requirements:** D-01 … D-20 (see `02.3-CONTEXT.md` for full text). Touchpoints: classifier + allowlists in `scripts/deploy/lib/triage_digest_build.py`, new emitter fields on `scripts/deploy/openclaw-gws-review-test` + `-rental-test`, render branches + 4096-char budget in `triage_digest_build.py`, ops mirror to `~/openclaw-ops/vps/scripts/` including a new `scripts/config/` sync step in `deploy.sh`.
 
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
 
-- [ ] TBD (`/gsd-plan-phase` when ready)
+- [ ] `02.3-01-PLAN.md` — Five-tier classifier + 3 operator-tunable allowlists + review-script `HasListUnsubscribe`/`RecipientTo` emission (Wave 1, autonomous; covers D-01, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-17, D-18, D-19, D-20)
+- [ ] `02.3-02-PLAN.md` — Per-tier render branches + 4096-char running-budget truncation + urgent token state + `deploy.sh` config sync + live VPS deploy + manual UAT (Wave 2, depends on 02.3-01, has manual UAT checkpoint; covers D-02, D-03, D-12, D-13, D-14, D-15, D-16, D-18)
 
-Artifacts: `.planning/phases/02-3-triage-inclusion-broaden-inbox-today-excluding-promotions/`
+Artifacts: `.planning/phases/02-3-triage-inclusion-broaden-inbox-today-excluding-promotions/` (CONTEXT.md, RESEARCH.md, VALIDATION.md, DISCUSSION-LOG.md, 02.3-01-PLAN.md, 02.3-02-PLAN.md)
 
 ---
 
