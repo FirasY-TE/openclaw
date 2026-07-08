@@ -270,67 +270,6 @@ _Closure **2026-05-04**: Phase goals met for **VPS + ops + triage path**; Local 
 
 ---
 
-### Phase 02.3: Triage inclusion — broaden inbox-of-today, exclude promotions/newsletters
-
-**Depends on:** Phase **02.2** complete.
-
-**Goal:** Expand the digest's email inclusion rules so it shows everything received today (excluding promotions/newsletters, or at least demoting them under a separate sub-heading) rather than gating on the strict "Response Required" / `needs_reply` heuristic.
-
-**Why:** During 02.1.2 UAT (2026-04-28), the Modern Forms support email was a real reply-needed item but didn't surface in the digest until the operator asked Bella directly — i.e., the response-required filter is too strict and missing genuine email today. Goal is "all today's email, with promos demoted/grouped, not silently dropped."
-
-**Requirements:** D-01 … D-20 (see `02.3-CONTEXT.md` for full text). Touchpoints: classifier + allowlists in `scripts/deploy/lib/triage_digest_build.py`, new emitter fields on `scripts/deploy/openclaw-gws-review-test` + `-rental-test`, render branches + 4096-char budget in `triage_digest_build.py`, ops mirror to `~/openclaw-ops/vps/scripts/` including a new `scripts/config/` sync step in `deploy.sh`.
-
-**Plans:** 2 plans
-
-Plans:
-
-- [ ] `02.3-01-PLAN.md` — Five-tier classifier + 3 operator-tunable allowlists + review-script `HasListUnsubscribe`/`RecipientTo` emission (Wave 1, autonomous; covers D-01, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-17, D-18, D-19, D-20)
-- [ ] `02.3-02-PLAN.md` — Per-tier render branches + 4096-char running-budget truncation + urgent token state + `deploy.sh` config sync + live VPS deploy + manual UAT (Wave 2, depends on 02.3-01, has manual UAT checkpoint; covers D-02, D-03, D-12, D-13, D-14, D-15, D-16, D-18)
-
-Artifacts: `.planning/phases/02-3-triage-inclusion-broaden-inbox-today-excluding-promotions/` (CONTEXT.md, RESEARCH.md, VALIDATION.md, DISCUSSION-LOG.md, 02.3-01-PLAN.md, 02.3-02-PLAN.md)
-
----
-
-### Phase 02.4: Triage agent reply fidelity — full body + inline images
-
-**Depends on:** Phase **02.3** complete (per promotion order; can parallelize if scope stays independent).
-
-**Goal:** When the operator asks for the "full text" or "body" of an email, Bella returns the complete content rather than a `…`-truncated paraphrase, and surfaces inline images (or at least image references / OCR-able alt text) when present.
-
-**Why:** During 02.1.2 UAT (2026-04-28), the Modern Forms email body came back partial with `...` even though Bella could summarize it; an inline image in the same email was not represented. Truncation is currently capped at 4000 body chars in the digest blockquote — sufficient for summary, insufficient for full-body asks.
-
-**Requirements:** TBD (touchpoints: digest body cap in `triage_digest_build.py`; possible second-tier "full body" snapshot fetch path, or on-demand expansion via existing `tdr` token; image extraction/representation strategy).
-
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (`/gsd-plan-phase` when ready)
-
-Artifacts: `.planning/phases/02-4-triage-agent-reply-fidelity-full-body-and-inline-images/`
-
----
-
-### Phase 02.5: Triage digest grouping and presentation
-
-**Depends on:** Phase **02.4** complete (per promotion order; can parallelize if scope stays independent).
-
-**Goal:** Improve digest readability by grouping messages logically (per-source section headings such as "Hospitable" / "Email"; per-thread sub-grouping such as "Judy ↔ Jaclyn (res …)"; consider table or chart format for the at-a-glance view).
-
-**Why:** During 02.1.2 UAT (2026-04-28), Bella correctly grounded on the digest but the rendered list mixed messages from the same Hospitable thread without a clear sub-heading or thread roll-up. Clean grouping makes the operator scan + Bella's `summary` output dramatically faster.
-
-**Requirements:** TBD (touchpoints: `scripts/deploy/lib/triage_digest_build.py`, mirrored to `~/openclaw-ops/vps/scripts/`; potentially the inbound `triageDigestSnapshot` header copy).
-
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (`/gsd-plan-phase` when ready)
-
-Artifacts: `.planning/phases/02-5-triage-digest-grouping-and-presentation/`
-
----
-
 ### Phase 3: Beeper Integration
 
 **Goal:** Fetch Beeper messages via Mac node, surface urgent items through Telegram, and enable draft/approve/send workflow with Google Tasks creation.
@@ -439,16 +378,16 @@ Artifacts: `.planning/phases/02-5-triage-digest-grouping-and-presentation/`
 | 02.1.2 | Complete                               | Live UAT 2026-04-28 PASSED — Bella grounded on `triage-digest-latest.md`; summary, draft (Judy), ignore (Jaclyn) all worked; operator-driven send-now of Modern Forms reply succeeded |
 | 02.1.3 | Complete                               | Patched digest snapshot + ops pipeline; UAT 2026-05-03 (tail sentinel); deploy + grep verified                                                                                        |
 | 02.2   | **Complete** (closed 2026-05-04)       | VPS **2026.5.2** (`8b2a6e5`) via `openclaw-ops`; triage UAT + `tdr` send; Local/Mac optional alignment noted in `02.2-VERSION-TARGET.md`                                              |
-| 02.3   | Not started                            | Promoted from backlog — broaden digest email inclusion + promo/newsletter handling                                                                                                    |
-| 02.4   | Not started                            | Promoted from backlog — full-body + inline image fidelity                                                                                                                             |
-| 02.5   | Not started                            | Promoted from backlog — digest grouping / presentation                                                                                                                                |
+| 02.3   | **Demoted to backlog 999.3**           | Digest inclusion — operator pivoting to proactive approval; artifacts retained                                                                                                        |
+| 02.4   | **Demoted to backlog 999.2**           | Digest fidelity — same; may be obsolete if digest retired                                                                                                                             |
+| 02.5   | **Demoted to backlog 999.1**           | Digest grouping — same; may be obsolete if digest retired                                                                                                                             |
 | 3      | Not started                            | Prior Beeper design work available                                                                                                                                                    |
 | 4      | Not started                            | API investigation needed early                                                                                                                                                        |
 | 5      | Not started                            | After Phases 2-4 stabilize                                                                                                                                                            |
 
 ---
 
-_Last updated: 2026-05-03 (promoted **02.3–02.5** from backlog; **999.4** remains in backlog)_
+_Last updated: 2026-07-07 (demoted **02.3–02.5** back to backlog **999.1–999.3**; added **999.5** proactive reply approval pivot)_
 
 ### Phase 1000: test
 
@@ -466,6 +405,92 @@ Plans:
 ## Backlog
 
 Future-phase parking lot. Promote with `/gsd-review-backlog` when ready.
+
+### Phase 999.5: Proactive reply approval — replace triage digest (BACKLOG)
+
+**Goal:** Retire the end-of-day triage digest UX. Replace with a small proactive flow: **tight reply-needed rules** → ping in Approvals topic → draft on request (auto-draft later) → explicit approve via `tdr`.
+
+**Why:** Operator not getting value from digest UI; target flow is detect → draft → approve → send, starting small (one mailbox, rule-based detection first). Supersedes digest-improvement work in **999.1–999.3** if digest is retired.
+
+**MVP scope (when promoted):**
+
+- Tight **reply-needed / priority policy** (rules first; LLM only for edge cases)
+- Ping-on-detect with dedupe (rental OR personal — pick one at discuss)
+- Disable digest cron; keep Gmail review + `tdr` + topic routing
+- Defer: inline buttons, second mailbox, Hospitable/Beeper, auto-draft until ping + draft-on-request works
+
+**Related:** **999.4** send confirmation gate (fold in at promote time)
+
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (discuss with `/gsd-discuss-phase 999.5`, promote with `/gsd-review-backlog` when ready)
+
+Directory: `.planning/phases/999.5-proactive-reply-approval-replace-triage-digest-tight-rules-ping-on-detect/`
+
+---
+
+### Phase 999.1: Triage digest grouping and presentation (BACKLOG)
+
+**Goal:** Improve digest readability by grouping messages logically (per-source section headings; per-thread sub-grouping; consider table format).
+
+**Why:** UAT 2026-04-28 — digest mixed Hospitable thread items without clear roll-up.
+
+**Demoted from active Phase 02.5** (2026-07-07). Digest-specific — operator may delete once proactive approval (**999.5**) replaces digest.
+
+**Requirements:** TBD (touchpoints: `scripts/deploy/lib/triage_digest_build.py`)
+
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (promote with `/gsd-review-backlog` when ready)
+
+Artifacts: `.planning/phases/02-5-triage-digest-grouping-and-presentation/`
+
+---
+
+### Phase 999.2: Triage agent reply fidelity — full body + inline images (BACKLOG)
+
+**Goal:** When operator asks for full email body, Bella returns complete content (not `…`-truncated) and surfaces inline images when present.
+
+**Why:** UAT 2026-04-28 — Modern Forms body truncated at 4000 chars; inline image not represented.
+
+**Demoted from active Phase 02.4** (2026-07-07). Digest-specific — may be obsolete if digest retired.
+
+**Requirements:** TBD
+
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (promote with `/gsd-review-backlog` when ready)
+
+Artifacts: `.planning/phases/02-4-triage-agent-reply-fidelity-full-body-and-inline-images/`
+
+---
+
+### Phase 999.3: Triage inclusion — broaden inbox-of-today, exclude promotions/newsletters (BACKLOG)
+
+**Goal:** Expand digest email inclusion — everything received today (promos demoted/grouped, not silently dropped) rather than strict `needs_reply` heuristic.
+
+**Why:** UAT 2026-04-28 — Modern Forms reply-needed email missed digest until operator asked Bella directly.
+
+**Demoted from active Phase 02.3** (2026-07-07). Digest-specific — classification rules may still inform **999.5** reply-needed policy.
+
+**Requirements:** D-01 … D-20 in `02.3-CONTEXT.md`
+
+**Plans:** 2 plans (not executed)
+
+Plans:
+
+- [ ] `02.3-01-PLAN.md` — Five-tier classifier + allowlists + review-script emission
+- [ ] `02.3-02-PLAN.md` — Per-tier render + 4096-char budget + deploy + UAT
+
+Artifacts: `.planning/phases/02-3-triage-inclusion-broaden-inbox-today-excluding-promotions/`
+
+---
 
 ### Phase 999.4: Triage `tdr` explicit send confirmation gate (BACKLOG)
 

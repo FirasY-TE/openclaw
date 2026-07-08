@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v2026.4.12
 milestone_name: milestone
 status: **`openclaw-ops`** pinned **2026.5.2** (`8b2a6e57`); VPS live CLI under **`/data/.npm-global`** when `PATH` prefers it; **`openclaw-gws-triage-reply`** escape fix deployed. Local npm + Mac Sparkle alignment **deferred** (D-09/D-10).
-stopped_at: Phase 02.3 context gathered
-last_updated: "2026-05-19T02:22:31.658Z"
-last_activity: 2026-05-04
+stopped_at: Backlog 999.5 — proactive reply approval pivot (02.3–02.5 demoted)
+last_updated: "2026-07-08T04:14:00Z"
+last_activity: 2026-07-07
 progress:
   total_phases: 15
   completed_phases: 6
@@ -21,11 +21,11 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-08)
 
 **Core value:** One inbox that cuts through noise across communication sources — triage, drafts, and approvals so nothing important is missed.
-**Current focus:** **Phases 02.3–02.5** (promoted from backlog 2026-05-03), then **Phase 3 — Beeper** (Phase 02.2 closed 2026-05-04)
+**Current focus:** **Backlog 999.5** — proactive reply approval (replace triage digest; tight rules + ping-on-detect MVP). **Phases 02.3–02.5** demoted back to backlog **999.1–999.3** (2026-07-07). Next milestone phase when ready: **Phase 3 — Beeper**.
 
 ## Current Position
 
-Phase: **02.3 — Triage inclusion** (next in sequence), then **02.4**, **02.5**, then **3 — Beeper**. **02.2** — **COMPLETE** (`02.2-UAT.md`, `02.2-VERIFICATION.md`).
+Phase: **Backlog 999.5** (proactive reply approval — discuss/plan when ready). **02.3–02.5** demoted to backlog **999.1–999.3**. Then **Phase 3 — Beeper** when promoted. **02.2** — **COMPLETE** (`02.2-UAT.md`, `02.2-VERIFICATION.md`).
 Plan: 02.2 plans 01–04 executed; formal **UAT** six-for-six (`02.2-UAT.md`).
 Status: **`openclaw-ops`** pinned **2026.5.2** (`8b2a6e57`); VPS live CLI under **`/data/.npm-global`** when `PATH` prefers it; **`openclaw-gws-triage-reply`** escape fix deployed. Local npm + Mac Sparkle alignment **deferred** (D-09/D-10).
 Last activity: 2026-05-04
@@ -53,17 +53,18 @@ Progress: [█████████░] 85%
 - [Phase 02-1-1-triage-digest-context-fixes]: Blockquote cap is 4000 body chars with '... (truncated)' marker; header-line affordance sits at top of '## Needs attention' when non-empty
 - **[Phase 02.1.2, opened 2026-04-28]:** Live UAT showed Bella could not ground on the digest markdown already posted to the Telegram triage Forum topic (“paste or forward”). Session traces also showed failing `byterover` / `brv providers connect byterover` / empty `memory_search` in-agent. Decision: Phase 02.1.2 — inject canonical `triage-digest-latest.md` into Bella’s inbound Telegram context when routing matches the configured triage Forum thread; separately wire ByteRover auth in-container under `openclaw-ops` compose secrets + verify connect from `/data/.openclaw/workspace`.
 - **[Phase 02.2, closed 2026-05-04]:** VPS + `openclaw-ops` aligned to **2026.5.2** (`8b2a6e57`); document **two OpenClaw installs** in container (`/usr/local` vs `/data/.npm-global`); triage digest + `tdr` UAT in Telegram; `openclaw-gws-triage-reply` normalizes literal `\\n` from argv.
+- **[2026-07-07]:** Operator pivot — end-of-day triage digest not delivering value; target flow is proactive detect → draft → approve. Active **02.3–02.5** demoted to backlog **999.1–999.3**; new **999.5** captures small-start MVP (tight rules + ping-on-detect, one mailbox first).
 
 ### Blockers/Concerns
 
 - `openclaw-ops/vps/patches/0001-telegram-triage-auto-route.patch` was not reliably staying installed across compose recreates. Rather than fix, we are removing the patch entirely under Phase 02.1.
 - Triage items classified as `DraftNeeded: no` for external senders with "Response Required"-style subjects — **addressed in 02.1-02 source tree, now fixed on VPS as of 2026-04-23 mirror deploy**.
 - **Plan C conversational triage:** unblocked 2026-04-28 — digest snapshot now reaches the inbound agent for the configured triage Forum topic; live UAT passed.
-- **Backlog 999.4 (`tdr` explicit send confirmation gate):** captured; not blocking. **999.1–999.3** promoted to active **Phases 02.5, 02.4, 02.3** respectively (2026-05-03).
+- **Backlog 999.4 (`tdr` explicit send confirmation gate):** captured; fold into **999.5** when promoted. **999.1–999.3** demoted from active **02.5/02.4/02.3** (2026-07-07) — digest-specific; operator may delete once **999.5** validated. **999.5** added: proactive reply approval pivot.
 
 ## Session Continuity
 
-**Last session:** 2026-05-19T02:22:31.647Z
-**Stopped At:** Phase 02.3 context gathered
-**Resume File:** .planning/phases/02-3-triage-inclusion-broaden-inbox-today-excluding-promotions/02.3-CONTEXT.md
-**Resume hint:** Plan/execute **02.3** (inclusion) → **02.4** (fidelity) → **02.5** (grouping), then **Phase 3** (Beeper). Optional: `npm install -g openclaw@2026.5.2` on Mac + Sparkle bump to reduce Local/Mac drift from VPS.
+**Last session:** 2026-07-08
+**Stopped At:** Backlog 999.5 — proactive reply approval pivot
+**Resume File:** `.planning/ROADMAP.md` (Backlog section)
+**Resume hint:** `/gsd-discuss-phase 999.5` to nail reply-needed rules + MVP scope (one mailbox, ping-on-detect). Digest phases **999.1–999.3** parked — delete when confident. Optional: disable digest cron on VPS before building **999.5**.
