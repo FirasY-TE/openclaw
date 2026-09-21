@@ -277,8 +277,108 @@ ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 rm -f /data/openclaw-gws/
 # Verify with:
 ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 python3 -c \"import json; d=json.load(open('/data/openclaw-gws/output/morning-brief-context-latest.json')); [print('  %s: %s' % (s['name'], s.get('status'))) for s in d['health']['sources'] if 'auth' in s['name']]\""
 
---- Codex OAuth Recover ---
-docker exec -it openclaw-ridl-openclaw-1 openclaw onboard --auth-choice openai-codex
+--- openclaw.json ownership fix (after any root-run write) ---
+# Symptom: gateway logs "EACCES: permission denied, open '/data/.openclaw/openclaw.json'"
+# Cause: scripts that write openclaw.json run as root by default (docker exec without -u node).
+#        The gateway runs as node (uid 1000) and loses read access.
+# Fix:
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 chown 1000 /data/.openclaw/openclaw.json"
+# Then touch to trigger hot-reload (gateway skips reload on permission error):
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 touch /data/.openclaw/openclaw.json"
+
+--- OpenAI ChatGPT/Codex OAuth Recover ---
+# Symptom: cron summaries say "402 budget 10 has been reached for company" (Nexos)
+# or "FailoverError: OAuth token refresh failed for openai-codex". Means the
+# ChatGPT OAuth token expired, refresh failed, and the agent silently fell over
+# to the Nexos backup until that hit its company budget cap.
+#
+# Verify expired profile:
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 openclaw models auth list" | grep -i openai
+# Look for an `expires` timestamp in the past on the openai (or openai-codex)
+# profile. If `cooldown until` is also set, refresh has already given up.
+#
+# Re-auth (interactive — needs TTY for the URL paste prompt):
+ssh -t openclaw-vps "docker exec -it openclaw-ridl-openclaw-1 openclaw models auth login --provider openai --method oauth --force"
+# In 2026.6.1 the auth-choice IDs are `openai` / `openai-device-code` /
+# `openai-api-key`. There is NO `openai-codex` choice — the OpenAI plugin
+# owns the ChatGPT/Codex OAuth flow under provider id `openai`.
+# `--force` removes any stale OAuth profile for the provider before logging in.
+#
+# DO NOT use `openclaw onboard --auth-choice openai-codex` — the wizard
+# either treats the choice as unknown or short-circuits via "Keep current
+# values" when an existing config is detected, and never reaches OAuth.
+#
+# Verify after sign-in + paste-back:
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 openclaw models auth list" | grep -i openai
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 openclaw models status --check"
+# exit 0 = OK, 1 = expired, 2 = expiring soon (within 24h)
+#
+# Force-test the cron without waiting for 9:15 PM CT:
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 openclaw cron run 742493a0-6a2b-42e4-b518-2a87961db8a4"
+
+--- Gateway 500 / "Internal Server Error" / "protocol mismatch" ---
+# Symptom: Tailscale Web UI URL (srv1461033.taild67c58.ts.net/#token=...)
+# returns "Internal Server Error". `openclaw health` reports `protocol mismatch`.
+# Container logs show:
+#   Cannot find module '/data/.npm-global/lib/node_modules/openclaw/dist/<chunk>-<hash>.js'
+#
+# Cause: an in-place `npm install -g openclaw@<ver>` (or `deploy.sh --with-core`
+# without `--restart`) replaced the on-disk chunk hashes while the gateway was
+# still running. The running process still imports the OLD hashes via dynamic
+# import on every HTTP request → ERR_MODULE_NOT_FOUND → 500 + WS subprotocol
+# negotiation breaks → "protocol mismatch".
+#
+# Fix:
+ssh openclaw-vps "docker restart openclaw-ridl-openclaw-1"
+sleep 10
+ssh openclaw-vps "docker exec openclaw-ridl-openclaw-1 openclaw health 2>&1 | tail -10"
+# Should now show Telegram/agents/sessions instead of "protocol mismatch".
+#
+# Prevention: always include `--restart` on core upgrades:
+#   cd ~/openclaw-ops/vps && ./deploy.sh --with-core --restart
+
+--- "LLM request failed" on Telegram (Codex harness not loaded -> Nexos 402) ---
+# Symptom: Telegram replies (esp. DMs) return "LLM request failed". OAuth is FINE
+# (models auth list shows openai OK, not expired). Gateway logs show:
+#   "OpenClaw recorded a native Codex tool.call without a matching tool.result..."
+#   model fallback ... next=nexos/7d747642-... -> "402 budget 10 has been reached for company"
+# OR (if runtime was forced to built-in harness):
+#   [openai-transport] [responses] error ... causeCode=invalid_provider_content_type message=Connection error.
+#
+# Cause: on 2026.6.x, openai/* agent turns default to the Codex app-server harness.
+# If the `codex` plugin is not LOADED in the running gateway, the native Codex
+# tool.call has no handler -> no tool.result -> turn aborts -> cascades to the
+# Nexos fallback until it hits its 402 company budget cap.
+#
+# Fix (edit /data/.openclaw/openclaw.json, then restart):
+#  1) Enable codex plugin in BOTH plugins.allow AND plugins.entries:
+#       "allow":[...,"codex"], "entries":{"codex":{"enabled":true}}
+#  2) Model + runtime (canonical refs only; NOT openai-codex/...):
+#       agents.defaults.model.primary = "openai/gpt-5.5", fallbacks = []
+#       agents.defaults.models["openai/gpt-5.5"].agentRuntime.id = "codex"
+#  3) Clear stale Nexos fallback so a failed turn can't cascade to 402:
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 openclaw models fallbacks clear"
+#  4) Restart and confirm codex is in the loaded-plugins line:
+ssh openclaw-vps "docker restart openclaw-ridl-openclaw-1" && sleep 18
+ssh openclaw-vps "docker logs openclaw-ridl-openclaw-1 2>&1 | grep 'http server listening' | tail -1"
+#     WANT: ...(5 plugins: browser, codex, memory-core, telegram, workboard; ...)
+#  5) Smoke-test as the NODE user (gateway's user; see footgun):
+ssh openclaw-vps "docker exec -u node openclaw-ridl-openclaw-1 openclaw agent --agent main --session-key 'agent:main:telegram:direct:1460581318' --message 'Reply with exactly: pong' --thinking off" | tail -3
+#  6) In Telegram, send /new so the chat drops sessions pinned to the old model.
+#
+# Footguns:
+# - `openclaw plugins list` / `models status` run as the DEFAULT exec user (root,
+#   uid 0) falsely report: "codex blocked: suspicious ownership (uid=1000, expected
+#   uid=0 or root)". RED HERRING. The gateway runs as node (uid 1000); the plugin
+#   (owned by node:1000) is valid for it. Always inspect with `docker exec -u node`.
+#   Do NOT chown the plugin tree to root to silence it -- that breaks the real gateway.
+# - `openclaw config set agents.defaults.models."openai/gpt-5.5".agentRuntime.id codex`
+#   FAILS ("Unrecognized key") -- the CLI splits the / and . in the model key.
+#   Edit openclaw.json directly (python/jq) for any models["provider/model"] change.
+# - agentRuntime.id "openclaw" does NOT work for ChatGPT OAuth (hits chatgpt.com over
+#   plain HTTP -> invalid_provider_content_type / Connection error). Keep "codex".
+# - Model name is openai/gpt-5.5 (or gpt-5.4), never legacy openai-codex/gpt-5.x.
+#   Run `openclaw doctor --fix` if old refs remain.
 
 ===== GOOGLE TASKS (ONE-TIME DEDUPE) =====
 # Removes duplicate tasks on the PERSONAL task list by Gmail Message ID in notes
