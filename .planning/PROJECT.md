@@ -30,14 +30,10 @@ One inbox that cuts through the noise across all communication sources — surfa
 - ✓ Cron-based scheduling infrastructure — existing
 - ✓ Telegram DM delivery and inline button support — existing
 - ✓ Paired macOS node for local operations — existing
-- ✓ Telegram triage-topic canonical digest injection (Phase 02.1.2) — opt-in per Forum thread via `triageDigestSnapshot`; same markdown file as GWS digest output (`openclaw` core + VPS config)
 
 ### Active
 
-- [ ] End-of-day triage digest (4:30 PM CST daily + on-demand command)
-- [ ] Triage covers Gmail (personal + rental), Beeper messages, and Hospitable guest messages
-- [ ] Triage categorizes items as urgent / needs attention / needs reply
-- [ ] Triage offers to draft responses for items that need reply
+- [ ] **Unified daily inbox (999.5)** — summary of all emails/messages for the day; highlight importance; actions: calendar, reminder, respond (draft + approve). Replaces deprecated end-of-day triage digest. No patched OpenClaw core.
 - [ ] Beeper integration — fetch messages via Mac node (Desktop API / MCP / read-only skill)
 - [ ] Beeper — surface urgent messages via Telegram
 - [ ] Beeper — draft replies with Telegram approval workflow (Replace + Confirm Send)
@@ -53,12 +49,17 @@ One inbox that cuts through the noise across all communication sources — surfa
 - [ ] Proactive agent — unified view across all communication sources
 - [ ] Multi-agent architecture — orchestrator + domain-specific subagents
 - [ ] Channel architecture — Telegram Forum Topics for separated delivery (triage, approvals, hospitable, urgent)
-- [ ] On-demand triage command (run triage outside of scheduled time)
+
+### Deprecated / cancelled
+
+- ~~End-of-day triage digest (4:30 PM CST + `/triage`)~~ — **deprecated 2026-09-21** (see `.planning/TRIAGE-DEPRECATION.md`)
+- ~~Telegram triage-topic digest snapshot injection (Phase 02.1.2)~~ — retire with triage; blocks vanilla OpenClaw upgrades
+- ~~On-demand triage command~~ — replaced by 999.5 on-demand parity when built
 
 ### Out of Scope
 
 - Full auto-send for all Beeper messages — always require approval for non-Hospitable channels
-- Replacing the morning brief — the triage is complementary (end-of-day backward-looking vs. morning forward-looking)
+- Replacing the morning brief — unified inbox (999.5) may complement or eventually merge with brief; TBD at discuss
 - Direct Airbnb/VRBO API integration — Hospitable API is the unified source for bookings
 - Voice/phone call handling — text-based channels only for now
 - Building a custom web dashboard — Telegram (with Forum Topics) is the primary UI

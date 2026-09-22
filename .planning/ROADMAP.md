@@ -36,7 +36,9 @@ Plans:
 
 ---
 
-### Phase 2: End-of-Day Triage + On-Demand Command
+### Phase 2: End-of-Day Triage + On-Demand Command — **DEPRECATED (2026-09-21)**
+
+> **Do not extend.** End-of-day digest, `/triage`, and digest-snapshot patch stack retired. See `.planning/TRIAGE-DEPRECATION.md`. Successor: backlog **999.5** (unified daily inbox).
 
 **Goal:** Daily 4:30 PM CST triage digest covering Gmail + Hospitable guest messages, with categorization, draft-response offers, and an on-demand `/triage` command.
 
@@ -369,25 +371,25 @@ _Closure **2026-05-04**: Phase goals met for **VPS + ops + triage path**; Local 
 
 ## Status
 
-| Phase  | Status                                 | Notes                                                                                                                                                                                 |
-| ------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1      | Completed                              | Foundation — topic routing live                                                                                                                                                       |
-| 2      | Partial                                | Plans 02-01 and 02-02 completed; 02-03 superseded by 02.1                                                                                                                             |
-| 02.1   | Implementation done; UAT surfaced gaps | Plan C pivot — simplify triage draft surface; live UAT blocked by 02.1.1 gaps                                                                                                         |
-| 02.1.1 | Complete                               | Plan 01 (dict-leak fix) + Plan 02 (inline body + header-line) shipped + verified live                                                                                                 |
-| 02.1.2 | Complete                               | Live UAT 2026-04-28 PASSED — Bella grounded on `triage-digest-latest.md`; summary, draft (Judy), ignore (Jaclyn) all worked; operator-driven send-now of Modern Forms reply succeeded |
-| 02.1.3 | Complete                               | Patched digest snapshot + ops pipeline; UAT 2026-05-03 (tail sentinel); deploy + grep verified                                                                                        |
-| 02.2   | **Complete** (closed 2026-05-04)       | VPS **2026.5.2** (`8b2a6e5`) via `openclaw-ops`; triage UAT + `tdr` send; Local/Mac optional alignment noted in `02.2-VERSION-TARGET.md`                                              |
-| 02.3   | **Demoted to backlog 999.3**           | Digest inclusion — operator pivoting to proactive approval; artifacts retained                                                                                                        |
-| 02.4   | **Demoted to backlog 999.2**           | Digest fidelity — same; may be obsolete if digest retired                                                                                                                             |
-| 02.5   | **Demoted to backlog 999.1**           | Digest grouping — same; may be obsolete if digest retired                                                                                                                             |
-| 3      | Not started                            | Prior Beeper design work available                                                                                                                                                    |
-| 4      | Not started                            | API investigation needed early                                                                                                                                                        |
-| 5      | Not started                            | After Phases 2-4 stabilize                                                                                                                                                            |
+| Phase  | Status                           | Notes                                                                                                                                    |
+| ------ | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 1      | Completed                        | Foundation — topic routing live                                                                                                          |
+| 2      | **Deprecated**                   | Digest + `/triage` retired 2026-09-21; historical plans 02-01/02-02 shipped                                                              |
+| 02.1   | **Deprecated** (historical)      | Plan C shipped then retired with Phase 2                                                                                                 |
+| 02.1.1 | **Deprecated** (historical)      | Digest rendering fixes — no longer relevant                                                                                              |
+| 02.1.2 | **Deprecated** (historical)      | Digest snapshot injection — remove patch on VPS to ease OpenClaw upgrades                                                                |
+| 02.1.3 | **Deprecated** (historical)      | Patched-core pipeline — retire with triage shutdown                                                                                      |
+| 02.2   | **Complete** (closed 2026-05-04) | VPS **2026.5.2** (`8b2a6e5`) via `openclaw-ops`; triage UAT + `tdr` send; Local/Mac optional alignment noted in `02.2-VERSION-TARGET.md` |
+| 02.3   | **Obsolete (999.3)**             | Digest deprecated 2026-09-21                                                                                                             |
+| 02.4   | **Obsolete (999.2)**             | Digest deprecated 2026-09-21                                                                                                             |
+| 02.5   | **Obsolete (999.1)**             | Digest deprecated 2026-09-21                                                                                                             |
+| 3      | Not started                      | Prior Beeper design work available                                                                                                       |
+| 4      | Not started                      | API investigation needed early                                                                                                           |
+| 5      | Not started                      | After Phases 2-4 stabilize                                                                                                               |
 
 ---
 
-_Last updated: 2026-07-07 (demoted **02.3–02.5** back to backlog **999.1–999.3**; added **999.5** proactive reply approval pivot)_
+_Last updated: 2026-09-21 (**Phase 2 triage digest deprecated**; successor **999.5** unified daily inbox; see `TRIAGE-DEPRECATION.md`)_
 
 ### Phase 1000: test
 
@@ -406,20 +408,24 @@ Plans:
 
 Future-phase parking lot. Promote with `/gsd-review-backlog` when ready.
 
-### Phase 999.5: Proactive reply approval — replace triage digest (BACKLOG)
+### Phase 999.5: Unified daily inbox — replace deprecated triage digest (BACKLOG)
 
-**Goal:** Retire the end-of-day triage digest UX. Replace with a small proactive flow: **tight reply-needed rules** → ping in Approvals topic → draft on request (auto-draft later) → explicit approve via `tdr`.
+**Goal:** Restore the original product vision: **one daily summary of all emails and messages**, important items highlighted, with per-item actions — **calendar**, **reminder/task**, **respond** (draft + approve). Built on prepared GWS pipeline files + **OpenClaw cron agent** (morning-brief pattern). **No patched OpenClaw core.**
 
-**Why:** Operator not getting value from digest UI; target flow is detect → draft → approve → send, starting small (one mailbox, rule-based detection first). Supersedes digest-improvement work in **999.1–999.3** if digest is retired.
+**Why:** End-of-day triage digest deprecated 2026-09-21 — wrong UX, drifted from vision, blocked vanilla OpenClaw upgrades (digest snapshot patch). See `.planning/TRIAGE-DEPRECATION.md`.
 
 **MVP scope (when promoted):**
 
-- Tight **reply-needed / priority policy** (rules first; LLM only for edge cases)
-- Ping-on-detect with dedupe (rental OR personal — pick one at discuss)
-- Disable digest cron; keep Gmail review + `tdr` + topic routing
-- Defer: inline buttons, second mailbox, Hospitable/Beeper, auto-draft until ping + draft-on-request works
+- Tight **priority / importance rules** (all items visible; promos demoted not dropped)
+- One source first (e.g. rental Gmail + Hospitable), then expand
+- Prepared context JSON → agent-composed scannable summary to Telegram
+- Per-item actions wired to existing tools (`tdr`, task create, calendar confirm)
+- On-demand command parity with scheduled run
+- **No** `triage_digest_build.py`, **no** `OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_*`
 
-**Related:** **999.4** send confirmation gate (fold in at promote time)
+**Related:** **999.4** send confirmation gate (fold in at promote time). **999.1–999.3** obsolete.
+
+**Context:** `.planning/phases/999.5-proactive-reply-approval-replace-triage-digest-tight-rules-ping-on-detect/CONTEXT.md`
 
 **Plans:** 0 plans
 
@@ -437,7 +443,7 @@ Directory: `.planning/phases/999.5-proactive-reply-approval-replace-triage-diges
 
 **Why:** UAT 2026-04-28 — digest mixed Hospitable thread items without clear roll-up.
 
-**Demoted from active Phase 02.5** (2026-07-07). Digest-specific — operator may delete once proactive approval (**999.5**) replaces digest.
+**Obsolete** — digest deprecated 2026-09-21. Safe to delete when operator confirms.
 
 **Requirements:** TBD (touchpoints: `scripts/deploy/lib/triage_digest_build.py`)
 
@@ -457,7 +463,7 @@ Artifacts: `.planning/phases/02-5-triage-digest-grouping-and-presentation/`
 
 **Why:** UAT 2026-04-28 — Modern Forms body truncated at 4000 chars; inline image not represented.
 
-**Demoted from active Phase 02.4** (2026-07-07). Digest-specific — may be obsolete if digest retired.
+**Obsolete** — digest deprecated 2026-09-21.
 
 **Requirements:** TBD
 
@@ -477,7 +483,7 @@ Artifacts: `.planning/phases/02-4-triage-agent-reply-fidelity-full-body-and-inli
 
 **Why:** UAT 2026-04-28 — Modern Forms reply-needed email missed digest until operator asked Bella directly.
 
-**Demoted from active Phase 02.3** (2026-07-07). Digest-specific — classification rules may still inform **999.5** reply-needed policy.
+**Obsolete** — digest deprecated 2026-09-21. Classification ideas may inform **999.5** rules only.
 
 **Requirements:** D-01 … D-20 in `02.3-CONTEXT.md`
 

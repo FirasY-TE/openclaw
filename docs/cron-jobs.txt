@@ -61,6 +61,12 @@ Hospitable Fetch
 */10 * * * *
 Script: /data/openclaw-gws/bin/openclaw-hospitable-fetch
 Log: /data/openclaw-gws/logs/hospitable-fetch.log
+Output: /data/openclaw-gws/output/hospitable-events-latest.json
+Includes:
+  - properties
+  - reservations (guest/properties/financials)
+  - per-reservation messages
+  - property calendars (90-day availability + nightly price)
 
 Rental Signal Merge
 3,13,23,33,43,53 * * * *
@@ -111,6 +117,13 @@ Flow:
 Agent TOOLS.md (/home/node/.openclaw/workspace/TOOLS.md) documents the
 confirm helper commands for the gateway agent.
 Idempotent via state file (skips already-processed message IDs).
+
+Triage Digest (End of day) — DEPRECATED 2026-09-21
+  DO NOT ENABLE. Retired in favor of unified daily inbox (backlog 999.5).
+  Shutdown checklist: .planning/TRIAGE-DEPRECATION.md (openclaw-ops: comment out cron line,
+  remove OPENCLAW_TRIAGE_DIGEST_SNAPSHOT_* env, drop triage snapshot patch if unused).
+  Was: 30 16 * * * CRON_TZ=America/Chicago → openclaw-gws-triage-digest
+  Kept for reference: openclaw-gws-triage-reply (tdr) may still be used for email respond actions.
 
 --- OpenClaw cron (openclaw cron list) ---
 
